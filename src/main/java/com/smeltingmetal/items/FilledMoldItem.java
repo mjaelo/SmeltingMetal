@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
-
 import java.util.List;
 
 public class FilledMoldItem extends Item {
@@ -19,7 +18,6 @@ public class FilledMoldItem extends Item {
         super(pProperties);
     }
 
-    // --- NBT Helper Methods ---
     public static ItemStack createFilledMold(String metalType) {
         ItemStack stack = new ItemStack(ModItems.FILLED_MOLD.get());
         setMetalType(stack, metalType);
@@ -35,15 +33,14 @@ public class FilledMoldItem extends Item {
         if (stack.hasTag() && stack.getTag().contains(METAL_TYPE_NBT)) {
             return stack.getTag().getString(METAL_TYPE_NBT);
         }
-        return "unknown"; // Default or error case
+        return "unknown";
     }
 
-    // --- Display Name & Tooltip ---
     @Override
     public Component getName(ItemStack stack) {
         String metalType = getMetalType(stack);
-        // Lang key example: item.smeltingmetal.filled_mold_of
-        return Component.translatable("item.smeltingmetal.filled_mold_of", Component.translatable("metal.smeltingmetal." + metalType));
+        return Component.translatable("item.smeltingmetal.filled_mold_of", 
+            Component.translatable("metal.smeltingmetal." + metalType));
     }
 
     @Override

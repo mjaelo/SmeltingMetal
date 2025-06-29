@@ -1,23 +1,54 @@
-# eclipse
-bin
-*.launch
-.settings
-.metadata
-.classpath
-.project
-
-# idea
-out
+# IDE and Editor Files
+.idea/
+.vscode/
+*.iml
 *.ipr
 *.iws
-*.iml
-.idea
+*.launch
+.settings/
+.project
+.classpath
+bin/
+out/
 
-# gradle
-build
-.gradle
+# Build Directories
+build/
+.gradle/
 
-# other
+# Run Directories
+run/
+run-data/
+logs/
+
+# Local Configuration
+config/*.toml
+!config/defaultconfigs/
+
+# Generated Resources
+src/generated/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# KubeJS
+deploy_*.sh
+kubejs/
+
+# Crash Reports
+crash-reports/
+
+# Local Development
+local/
+*.local
 eclipse
 run
 
