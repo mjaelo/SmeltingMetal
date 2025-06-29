@@ -18,6 +18,8 @@ build/
 # Run Directories
 run/
 run-data/
+run-data/logs/
+run/logs/
 logs/
 
 # Local Configuration
@@ -54,3 +56,4 @@ run
 
 # Files from Forge MDK
 forge*changelog.txt
+/run-data/logs/
