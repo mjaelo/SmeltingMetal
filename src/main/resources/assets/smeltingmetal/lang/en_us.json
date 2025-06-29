@@ -1,0 +1,18 @@
+{
+  "item.smeltingmetal.clay_mold": "Clay Mold",
+  "item.smeltingmetal.hardened_mold": "Hardened Mold",
+  "item.smeltingmetal.molten_metal_of": "Molten %s",
+  "item.smeltingmetal.filled_mold_of": "Filled %s Mold",
+
+  "metal.smeltingmetal.iron": "Iron",
+  "metal.smeltingmetal.gold": "Gold",
+  "metal.smeltingmetal.copper": "Copper",
+  "metal.smeltingmetal.unknown": "Unknown Metal",
+  "metal.smeltingmetal.steel": "Steel",
+  "metal.smeltingmetal.tin": "Tin",
+
+  "tooltip.smeltingmetal.metalType": "Type: %s",
+  "tooltip.smeltingmetal.unknown_metal": "Unknown Metal Type!",
+  "tooltip.smeltingmetal.cool_in_water": "Right-click on water to cool.",
+  "tooltip.smeltingmetal.make_filled_mold": "Right-click with Hardened Mold in offhand to make a Filled Mold"
+}

@@ -1,0 +1,12 @@
+{
+  "type": "smeltingmetal:molten_metal_smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.7,
+  "group": "smeltingmetal",
+  "ingredient": {
+    "item": "minecraft:raw_gold"
+  },
+  "metalType": "gold",
+  "result": "smeltingmetal:molten_metal"
+}
