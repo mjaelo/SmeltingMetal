@@ -1,57 +1,64 @@
 package com.smeltingmetal.items;
 
 import com.smeltingmetal.ModItems;
-import net.minecraft.ChatFormatting;
+import com.smeltingmetal.ModMetals;
+import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class MoltenMetalItem extends Item {
-    public static final String METAL_TYPE_NBT = "MetalType";
+    public static final String METAL_ID_KEY = "MetalID";
 
-    public MoltenMetalItem(Properties pProperties) {
-        super(pProperties);
+    public MoltenMetalItem(Properties properties) {
+        super(properties);
     }
 
-    public static ItemStack createMoltenMetal(String metalType) {
+    @Override
+    public Component getName(ItemStack pStack) {
+        String metalId = getMetalId(pStack);
+        if (metalId != null) {
+            String formattedName = metalId.substring(0, 1).toUpperCase() + metalId.substring(1);
+            return Component.translatable("item." + SmeltingMetalMod.MODID + ".molten_metal.specific", formattedName);
+        }
+        return super.getName(pStack);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack pStack, @Nullable Level pLevel, List<Component> pTooltip, TooltipFlag pIsAdvanced) {
+        super.appendHoverText(pStack, pLevel, pTooltip, pIsAdvanced);
+    }
+
+    // fillItemCategory has been removed as it is handled by the BuildCreativeModeTabContentsEvent in ModItems
+
+    public static ItemStack createStack(String metalId) {
         ItemStack stack = new ItemStack(ModItems.MOLTEN_METAL.get());
-        setMetalType(stack, metalType);
+        stack.getOrCreateTag().putString(METAL_ID_KEY, metalId);
         return stack;
     }
 
-    public static void setMetalType(ItemStack stack, String metalType) {
-        CompoundTag nbt = stack.getOrCreateTag();
-        nbt.putString(METAL_TYPE_NBT, metalType);
-    }
-
-    public static String getMetalType(ItemStack stack) {
-        if (stack.hasTag() && stack.getTag().contains(METAL_TYPE_NBT)) {
-            return stack.getTag().getString(METAL_TYPE_NBT);
+    public static String getMetalId(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(METAL_ID_KEY)) {
+            return tag.getString(METAL_ID_KEY);
         }
-        return "unknown";
+        return null;
     }
 
-    @Override
-    public Component getName(ItemStack stack) {
-        String metalType = getMetalType(stack);
-        return Component.translatable("item.smeltingmetal.molten_metal_of", Component.translatable("metal.smeltingmetal." + metalType));
-    }
-
-    @Override
-    public void appendHoverText(ItemStack pStack, @Nullable Level pLevel, List<Component> pTooltipComponents, TooltipFlag pIsAdvanced) {
-        super.appendHoverText(pStack, pLevel, pTooltipComponents, pIsAdvanced);
-        String metalType = getMetalType(pStack);
-        if (!"unknown".equals(metalType)) {
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.metalType", Component.translatable("metal.smeltingmetal." + metalType)).withStyle(ChatFormatting.GRAY));
-            // NEW: Add instruction for making filled mold
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.make_filled_mold").withStyle(ChatFormatting.BLUE));
-        } else {
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.unknown_molten_metal").withStyle(ChatFormatting.RED));
+    public ResourceLocation getIngotId(ItemStack stack) {
+        String metalId = getMetalId(stack);
+        if (metalId != null) {
+            return ModMetals.getMetalProperties(metalId)
+                    .map(props -> props.ingotId())
+                    .orElse(null);
         }
+        return null;
     }
 }

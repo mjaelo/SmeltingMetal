@@ -1,9 +1,10 @@
 package com.smeltingmetal.datagen;
 
-import com.smeltingmetal.ModItems;
 import com.smeltingmetal.ModMetals;
 import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.config.MetalsConfig;
 import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.recipes.MoltenMetalSmeltingSerializer;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeCategory;
@@ -12,11 +13,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import com.smeltingmetal.recipes.MoltenMetalSmeltingSerializer;
 import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.function.Consumer;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class ModRecipeProvider extends RecipeProvider {
 
@@ -61,30 +62,47 @@ public class ModRecipeProvider extends RecipeProvider {
             return;
         }
 
-        // Smelting recipe
-        pWriter.accept(new FinishedCookingRecipe(
-                new ResourceLocation(SmeltingMetalMod.MODID, metalType + "_molten_from_" + rawOreId.getPath() + "_smelting"),
+        // Get the molten metal item for this metal type
+        Item moltenMetalItem = ForgeRegistries.ITEMS.getValue(
+            new ResourceLocation(SmeltingMetalMod.MODID, "molten_" + metalType));
+            
+        if (moltenMetalItem == null || moltenMetalItem == Items.AIR) {
+            LOGGER.warn("No molten metal item found for metal type '{}'", metalType);
+            return;
+        }
+        
+        // Get configured recipe types
+        List<? extends String> recipeTypes = MetalsConfig.CONFIG.recipeTypes.get();
+        
+        // Create recipes for each configured type
+        for (String recipeType : recipeTypes) {
+            int cookingTime;
+            float experience = 0.7f;
+            
+            // Set cooking time based on recipe type
+            switch (recipeType.toLowerCase()) {
+                case "smelting" -> cookingTime = 200;
+                case "blasting" -> cookingTime = 100;
+                case "smoking" -> cookingTime = 100;
+                case "campfire_cooking" -> cookingTime = 600;
+                default -> {
+                    LOGGER.warn("Unknown recipe type: {}. Using default smelting time.", recipeType);
+                    cookingTime = 200;
+                }
+            }
+            
+            pWriter.accept(new FinishedCookingRecipe(
+                new ResourceLocation(SmeltingMetalMod.MODID, 
+                    String.format("%s_molten_from_%s_%s", metalType, rawOreId.getPath(), recipeType)),
                 "smeltingmetal",
                 Ingredient.of(rawOre),
-                ModItems.MOLTEN_METAL.get(),
-                0.7f,
-                200,
+                moltenMetalItem,
+                experience,
+                cookingTime,
                 RecipeCategory.MISC,
                 MoltenMetalSmeltingSerializer.INSTANCE,
                 metalType
-        ));
-
-        // Blasting recipe
-        pWriter.accept(new FinishedCookingRecipe(
-                new ResourceLocation(SmeltingMetalMod.MODID, metalType + "_molten_from_" + rawOreId.getPath() + "_blasting"),
-                "smeltingmetal",
-                Ingredient.of(rawOre),
-                ModItems.MOLTEN_METAL.get(),
-                0.7f,
-                100,
-                RecipeCategory.MISC,
-                MoltenMetalSmeltingSerializer.INSTANCE,
-                metalType
-        ));
+            ));
+        }
     }
 }

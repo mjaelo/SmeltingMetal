@@ -1,161 +1,202 @@
 package com.smeltingmetal.recipes;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import com.smeltingmetal.ModItems;
 import com.smeltingmetal.ModMetals;
+import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.config.MetalsConfig;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.*;
 import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 
+import java.lang.reflect.Field;
 import java.util.*;
-import java.util.stream.Collectors;
 
-@Mod.EventBusSubscriber
+@Mod.EventBusSubscriber(modid = SmeltingMetalMod.MODID)
 public class RecipeRemoval {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Set<ResourceLocation> RECIPES_TO_REMOVE = new HashSet<>();
-    private static boolean initialized = false;
+    private static final Map<ResourceLocation, Recipe<?>> ORIGINAL_RECIPES = new HashMap<>();
+    private static final Set<ResourceLocation> REPLACED_RECIPES = new HashSet<>();
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onServerAboutToStart(ServerAboutToStartEvent event) {
-        if (initialized) {
-            return;
-        }
-        initialized = true;
+    public static void restoreRecipes() {
+        if (ORIGINAL_RECIPES.isEmpty()) return;
+        RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
+        if (recipeManager == null) return;
 
+        LOGGER.info("Restoring {} vanilla recipes...", ORIGINAL_RECIPES.size());
+        ORIGINAL_RECIPES.forEach((id, recipe) -> replaceRecipeInManager(recipeManager, id, recipe));
+        ORIGINAL_RECIPES.clear();
+        REPLACED_RECIPES.clear();
+    }
+
+    public static void replaceRecipes() {
+        RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
+        if (recipeManager == null) return;
+        MinecraftServer server = SmeltingMetalMod.getServer();
+        if (server == null) return;
+
+        RegistryAccess registryAccess = server.registryAccess();
+        Set<RecipeType<?>> recipeTypesToReplace = getTargetRecipeTypes();
+        if (recipeTypesToReplace.isEmpty()) return;
+
+        LOGGER.info("Starting recipe replacement for types: {}", recipeTypesToReplace);
         try {
-            // Get all metals from config
-            Map<String, String> metalToIngotMap = ModMetals.getAllMetalProperties().values().stream()
-                    .collect(Collectors.toMap(
-                            metal -> metal.id(),
-                            metal -> metal.ingotId().toString()
-                    ));
+            Field recipesField = getRecipesField();
+            recipesField.setAccessible(true);
+            Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType = (Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>>) recipesField.get(recipeManager);
 
-            // Get the recipe manager
-            RecipeManager recipeManager = event.getServer().getRecipeManager();
-
-            // Get all recipes by type
-            Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType = new HashMap<>();
-
-            // Group recipes by type
-            for (Recipe<?> recipe : recipeManager.getRecipes()) {
-                RecipeType<?> type = recipe.getType();
-                recipesByType
-                        .computeIfAbsent(type, t -> new HashMap<>())
-                        .put(recipe.getId(), recipe);
-            }
-
-            // Find all smelting and blasting recipes to remove
-            List<ResourceLocation> toRemove = new ArrayList<>();
-
-            // Check all registered recipes
             for (Map.Entry<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> entry : recipesByType.entrySet()) {
-                RecipeType<?> type = entry.getKey();
+                if (!recipeTypesToReplace.contains(entry.getKey())) continue;
 
-                if (type == RecipeType.SMELTING || type == RecipeType.BLASTING) {
-                    for (Map.Entry<ResourceLocation, Recipe<?>> recipeEntry : entry.getValue().entrySet()) {
-                        ResourceLocation id = recipeEntry.getKey();
-                        Recipe<?> recipe = recipeEntry.getValue();
-
-                        if (shouldRemoveRecipe(id, recipe, type == RecipeType.SMELTING ? "smelting" : "blasting",
-                                metalToIngotMap)) {
-                            toRemove.add(id);
+                List<Pair<Recipe<?>, ResourceLocation>> recipesToReplaceList = new ArrayList<>();
+                for (Recipe<?> recipe : entry.getValue().values()) {
+                    ItemStack result = recipe.getResultItem(registryAccess);
+                    if (!result.isEmpty()) {
+                        ResourceLocation ingotId = ForgeRegistries.ITEMS.getKey(result.getItem());
+                        if (ModMetals.getMetalId(ingotId) != null) {
+                            recipesToReplaceList.add(Pair.of(recipe, ingotId));
                         }
                     }
                 }
-            }
 
-            // Remove the recipes
-            if (!toRemove.isEmpty()) {
-                LOGGER.info("Removing {} vanilla smelting/blasting recipes", toRemove.size());
+                for (Pair<Recipe<?>, ResourceLocation> pair : recipesToReplaceList) {
+                    Recipe<?> originalRecipe = pair.getFirst();
+                    if (REPLACED_RECIPES.contains(originalRecipe.getId())) continue;
 
-                // Create a new map without the recipes we want to remove
-                Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> newRecipes = new HashMap<>();
-
-                for (Map.Entry<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> entry : recipesByType.entrySet()) {
-                    Map<ResourceLocation, Recipe<?>> newTypeRecipes = new HashMap<>();
-
-                    for (Map.Entry<ResourceLocation, Recipe<?>> recipeEntry : entry.getValue().entrySet()) {
-                        if (!toRemove.contains(recipeEntry.getKey())) {
-                            newTypeRecipes.put(recipeEntry.getKey(), recipeEntry.getValue());
-                        }
+                    Recipe<?> newRecipe = createMoltenMetalRecipe(originalRecipe, pair.getSecond(), registryAccess);
+                    if (newRecipe != null) {
+                        ORIGINAL_RECIPES.put(originalRecipe.getId(), originalRecipe);
+                        REPLACED_RECIPES.add(originalRecipe.getId());
+                        replaceRecipeInManager(recipeManager, originalRecipe.getId(), newRecipe);
+                        LOGGER.debug("Replaced recipe {} with molten metal variant for {}", originalRecipe.getId(), pair.getSecond());
                     }
-
-                    newRecipes.put(entry.getKey(), newTypeRecipes);
                 }
-
-                // Replace the recipes map
-                try {
-                    java.lang.reflect.Field recipesField = RecipeManager.class.getDeclaredField("recipes");
-                    recipesField.setAccessible(true);
-                    recipesField.set(recipeManager, newRecipes);
-
-                    // Also clear the byName cache
-                    java.lang.reflect.Field byNameField = RecipeManager.class.getDeclaredField("byName");
-                    byNameField.setAccessible(true);
-                    @SuppressWarnings("unchecked")
-                    Map<ResourceLocation, Recipe<?>> byName = (Map<ResourceLocation, Recipe<?>>) byNameField.get(recipeManager);
-                    byName.clear();
-
-                    // Rebuild the byName cache
-                    for (Map<ResourceLocation, Recipe<?>> map : newRecipes.values()) {
-                        byName.putAll(map);
-                    }
-
-                    RECIPES_TO_REMOVE.addAll(toRemove);
-                    LOGGER.info("Successfully removed {} recipes", toRemove.size());
-
-                } catch (Exception e) {
-                    LOGGER.error("Failed to remove recipes: {}", e.getMessage(), e);
-                }
-            } else {
-                LOGGER.info("No recipes to remove");
             }
-
+            LOGGER.info("Finished recipe replacement. Replaced {} recipes.", REPLACED_RECIPES.size());
         } catch (Exception e) {
-            LOGGER.error("Error removing recipes: {}", e.getMessage(), e);
+            LOGGER.error("Failed to access recipe manager fields via reflection", e);
         }
     }
 
-    private static boolean shouldRemoveRecipe(ResourceLocation recipeId, Recipe<?> recipe, String type,
-                                              Map<String, String> metalToIngotMap) {
+    private static Recipe<?> createMoltenMetalRecipe(Recipe<?> originalRecipe, ResourceLocation originalIngotId, RegistryAccess registryAccess) {
+        String metalId = ModMetals.getMetalId(originalIngotId);
+        if (metalId == null) return null;
+
+        ItemStack resultStack = ModItems.getMoltenMetalStack(metalId);
+        if (resultStack.isEmpty()) return null;
+
+        if (originalRecipe instanceof AbstractCookingRecipe originalCookingRecipe) {
+            Ingredient ingredient = originalCookingRecipe.getIngredients().get(0);
+            float experience = originalCookingRecipe.getExperience();
+            int cookingTime = originalCookingRecipe.getCookingTime();
+            String group = originalCookingRecipe.getGroup();
+            CookingBookCategory category = originalCookingRecipe.category();
+            ResourceLocation id = originalRecipe.getId();
+
+            if (originalRecipe.getType() == RecipeType.SMELTING) {
+                return new SmeltingRecipe(id, group, category, ingredient, resultStack, experience, cookingTime);
+            } else if (originalRecipe.getType() == RecipeType.BLASTING) {
+                return new BlastingRecipe(id, group, category, ingredient, resultStack, experience, cookingTime);
+            } else if (originalRecipe.getType() == RecipeType.SMOKING) {
+                return new SmokingRecipe(id, group, category, ingredient, resultStack, experience, cookingTime);
+            } else if (originalRecipe.getType() == RecipeType.CAMPFIRE_COOKING) {
+                return new CampfireCookingRecipe(id, group, category, ingredient, resultStack, experience, cookingTime);
+            }
+        }
+        return null;
+    }
+
+    private static void replaceRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
         try {
-            // Check if this is a recipe for one of our metals
-            String recipePath = recipeId.getPath();
-            for (String ingotId : metalToIngotMap.values()) {
-                // Extract just the item name (e.g., "gold_ingot" from "minecraft:gold_ingot")
-                String itemName = ingotId.contains(":") ? ingotId.split(":")[1] : ingotId;
+            Field recipesField = getRecipesField();
+            recipesField.setAccessible(true);
+            Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType = (Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>>) recipesField.get(recipeManager);
 
-                // Look for patterns like "gold_ingot_from_smelting" or "gold_ingot_from_blasting"
-                // Now matches recipes from any mod namespace
-                if (recipePath.startsWith(itemName + "_from_") ||
-                        recipePath.endsWith("_to_" + itemName) ||
-                        recipePath.equals(itemName + "_smelting") ||
-                        recipePath.equals(itemName + "_blasting") ||
-                        (recipePath.contains("smelting") && recipePath.contains(itemName)) ||
-                        (recipePath.contains("blasting") && recipePath.contains(itemName))) {
+            Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> newRecipesByType = new HashMap<>(recipesByType);
+            Map<ResourceLocation, Recipe<?>> innerMap = new HashMap<>(newRecipesByType.get(newRecipe.getType()));
+            innerMap.put(recipeId, newRecipe);
+            newRecipesByType.put(newRecipe.getType(), Collections.unmodifiableMap(innerMap));
+            recipesField.set(recipeManager, Collections.unmodifiableMap(newRecipesByType));
 
-                    LOGGER.debug("Matched recipe for removal - Type: {}, Namespace: {}, Path: {}",
-                                type, recipeId.getNamespace(), recipePath);
-                    return true;
-                }
-            }
+            Field byNameField = getByNameField();
+            byNameField.setAccessible(true);
+            Map<ResourceLocation, Recipe<?>> byName = (Map<ResourceLocation, Recipe<?>>) byNameField.get(recipeManager);
+            Map<ResourceLocation, Recipe<?>> newByName = new HashMap<>(byName);
+            newByName.put(recipeId, newRecipe);
+            byNameField.set(recipeManager, Collections.unmodifiableMap(newByName));
         } catch (Exception e) {
-            LOGGER.error("Error checking recipe {}: {}", recipeId, e.getMessage(), e);
+            LOGGER.error("Failed to update recipe manager for recipe: " + recipeId, e);
         }
-        return false;
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    private static Field getRecipesField() throws NoSuchFieldException {
+        // Try known names first
+        try {
+            return RecipeManager.class.getDeclaredField("recipes");
+        } catch (NoSuchFieldException ignored) {
+        }
+        // Fallback: look for first Map field matching the expected type
+        for (Field field : RecipeManager.class.getDeclaredFields()) {
+            if (Map.class.isAssignableFrom(field.getType())) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        throw new NoSuchFieldException("Could not find recipes field in RecipeManager (obfuscation mismatch)");
+    }
+
+    private static Field getByNameField() throws NoSuchFieldException {
+        try {
+            return RecipeManager.class.getDeclaredField("byName");
+        } catch (NoSuchFieldException ignored) {
+        }
+        for (Field field : RecipeManager.class.getDeclaredFields()) {
+            if (Map.class.isAssignableFrom(field.getType())) {
+                // skip the first map which is recipes
+                continue;
+            }
+        }
+        // As a fallback, iterate again and return any other map field (second one)
+        int count = 0;
+        for (Field field : RecipeManager.class.getDeclaredFields()) {
+            if (Map.class.isAssignableFrom(field.getType())) {
+                count++;
+                if (count == 2) {
+                    field.setAccessible(true);
+                    return field;
+                }
+            }
+        }
+        throw new NoSuchFieldException("Could not find byName field in RecipeManager (obfuscation mismatch)");
+    }
+
+    private static Set<RecipeType<?>> getTargetRecipeTypes() {
+        Set<RecipeType<?>> recipeTypes = new HashSet<>();
+        if (MetalsConfig.CONFIG == null || MetalsConfig.CONFIG.recipeTypes == null) return recipeTypes;
+        for (String typeName : MetalsConfig.CONFIG.recipeTypes.get()) {
+            Optional.ofNullable(ForgeRegistries.RECIPE_TYPES.getValue(new ResourceLocation(typeName))).ifPresent(recipeTypes::add);
+        }
+        return recipeTypes;
+    }
+
+    @SubscribeEvent
+    public static void onServerStarted(ServerStartedEvent event) {
+        LOGGER.info("Server started, triggering initial recipe replacement.");
+        replaceRecipes();
+    }
+
+    @SubscribeEvent
     public static void onReload(AddReloadListenerEvent event) {
-        // Reset initialization state on reload
-        initialized = false;
-        RECIPES_TO_REMOVE.clear();
+        restoreRecipes();
+        replaceRecipes();
     }
 }

@@ -101,4 +101,12 @@ public class ModMetals {
     public static boolean doesMetalExist(String id) {
         return METAL_PROPERTIES_MAP.containsKey(id);
     }
+
+    public static String getMetalId(ResourceLocation ingotId) {
+        return METAL_PROPERTIES_MAP.entrySet().stream()
+                .filter(entry -> entry.getValue().ingotId().equals(ingotId))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+    }
 }
