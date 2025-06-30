@@ -26,44 +26,52 @@ public class ModMetals {
         if (initialized) {
             return;
         }
-
+        
         METAL_PROPERTIES_MAP.clear();
         
         try {
-            // Try to load from config if available
-            if (MetalsConfig.CONFIG != null && MetalsConfig.CONFIG.metalDefinitions != null) {
-                List<? extends String> metalDefs = MetalsConfig.CONFIG.metalDefinitions.get();
-                for (String definition : metalDefs) {
-                    try {
-                        String[] parts = definition.split("=", 2);
-                        if (parts.length != 2) {
-                            LOGGER.error("Invalid metal definition format: {}", definition);
-                            continue;
+            // First check if we can safely access the config
+            if (MetalsConfig.CONFIG == null) {
+                LOGGER.warn("Config not loaded yet, using default metals");
+                METAL_PROPERTIES_MAP.putAll(DEFAULT_METALS);
+                initialized = true;
+                return;
+            }
+            
+            // Safely get config values
+            if (MetalsConfig.CONFIG.metalDefinitions != null) {
+                try {
+                    List<? extends String> metalDefs = MetalsConfig.CONFIG.metalDefinitions.get();
+                    
+                    if (metalDefs.isEmpty()) {
+                        LOGGER.warn("No metal definitions found in config, using default metals");
+                        METAL_PROPERTIES_MAP.putAll(DEFAULT_METALS);
+                    } else {
+                        // Parse metal definitions from config
+                        for (String def : metalDefs) {
+                            try {
+                                String[] parts = def.split("=\\s*", 2);
+                                if (parts.length == 2) {
+                                    String id = parts[0].trim();
+                                    ResourceLocation ingotId = new ResourceLocation(parts[1].trim());
+                                    registerMetal(new MetalProperties(id, ingotId));
+                                }
+                            } catch (Exception e) {
+                                LOGGER.error("Failed to parse metal definition: " + def, e);
+                            }
                         }
                         
-                        String metalId = parts[0].trim();
-                        String[] metalParts = metalId.split(":", 2);
-                        if (metalParts.length != 2) {
-                            LOGGER.error("Invalid metal ID format: {}", metalId);
-                            continue;
+                        if (METAL_PROPERTIES_MAP.isEmpty()) {
+                            LOGGER.warn("No valid metal definitions found, using default metals");
+                            METAL_PROPERTIES_MAP.putAll(DEFAULT_METALS);
                         }
-                        
-                        String[] ingotParts = parts[1].trim().split(":", 2);
-                        if (ingotParts.length != 2) {
-                            LOGGER.error("Invalid ingot format: {}", parts[1].trim());
-                            continue;
-                        }
-                        
-                        ResourceLocation ingotId = new ResourceLocation(ingotParts[0], ingotParts[1]);
-                        registerMetal(new MetalProperties(metalParts[1], ingotId));
-                        LOGGER.debug("Registered metal: {} -> {}", metalId, ingotId);
-                        
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to parse metal definition '{}': {}", definition, e.getMessage());
                     }
+                } catch (IllegalStateException e) {
+                    LOGGER.warn("Config not ready yet, using default metals");
+                    METAL_PROPERTIES_MAP.putAll(DEFAULT_METALS);
                 }
             } else {
-                LOGGER.warn("Config not loaded, using default metals");
+                LOGGER.warn("Metal definitions config not available, using default metals");
                 METAL_PROPERTIES_MAP.putAll(DEFAULT_METALS);
             }
         } catch (Exception e) {
