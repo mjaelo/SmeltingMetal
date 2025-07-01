@@ -1,7 +1,7 @@
 package com.smeltingmetal.items;
 
 import com.smeltingmetal.ModItems;
-import net.minecraft.ChatFormatting;
+import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public class FilledMoldItem extends Item {
@@ -39,8 +40,9 @@ public class FilledMoldItem extends Item {
     @Override
     public Component getName(ItemStack stack) {
         String metalType = getMetalType(stack);
-        return Component.translatable("item.smeltingmetal.filled_mold_of", 
-            Component.translatable("metal.smeltingmetal." + metalType));
+        String idPath = metalType.contains(":") ? metalType.split(":")[1] : metalType;
+        String formatted = idPath.substring(0,1).toUpperCase() + idPath.substring(1);
+        return Component.literal("Filled " + formatted + " Mold");
     }
 
     @Override
@@ -48,10 +50,11 @@ public class FilledMoldItem extends Item {
         super.appendHoverText(pStack, pLevel, pTooltipComponents, pIsAdvanced);
         String metalType = getMetalType(pStack);
         if (!"unknown".equals(metalType)) {
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.metalType", Component.translatable("metal.smeltingmetal." + metalType)).withStyle(ChatFormatting.GRAY));
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.cool_in_water").withStyle(ChatFormatting.BLUE));
+            String idPath = metalType.contains(":") ? metalType.split(":")[1] : metalType;
+            pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".metalType", idPath));
+            pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".cool_in_water"));
         } else {
-            pTooltipComponents.add(Component.translatable("tooltip.smeltingmetal.unknown_metal").withStyle(ChatFormatting.RED));
+            pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".unknown_metal"));
         }
     }
 }

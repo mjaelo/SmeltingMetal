@@ -7,6 +7,8 @@ import net.minecraftforge.fml.config.ModConfig;
 import java.util.List;
 import java.util.function.Predicate;
 
+import static com.smeltingmetal.SmeltingMetalMod.MODID;
+
 public class MetalsConfig {
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static final Config CONFIG;
@@ -18,7 +20,7 @@ public class MetalsConfig {
     }
     
     public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, "smeltingmetal-metals.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, MODID + "-common.toml");
     }
     
     public static class Config {

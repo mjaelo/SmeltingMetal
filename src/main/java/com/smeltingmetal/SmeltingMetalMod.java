@@ -43,14 +43,15 @@ public class SmeltingMetalMod {
         ModItems.ITEMS.register(modEventBus);
         ModRecipes.SERIALIZERS.register(modEventBus);
         
-        // Initialize metals from config
-        ModMetals.init();
+        // Initialize metals from config - will be refreshed on config loading event
+        //ModMetals.init();
         
         // Register to the mod event bus for recipe handling
         modEventBus.addListener(this::onRegisterRecipes);
         
         // Register to Forge event bus for server lifecycle events
         MinecraftForge.EVENT_BUS.register(this);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onConfigLoaded);
     }
     
     private void onRegisterRecipes(RegisterEvent event) {
@@ -83,6 +84,13 @@ public class SmeltingMetalMod {
     private void onConfigReloading(ModConfigEvent.Reloading event) {
         if (event.getConfig().getSpec() == MetalsConfig.CONFIG_SPEC) {
             LOGGER.info("Reloading metal configurations...");
+            ModMetals.init();
+        }
+    }
+    
+    private void onConfigLoaded(ModConfigEvent.Loading event) {
+        if (event.getConfig().getSpec() == MetalsConfig.CONFIG_SPEC) {
+            LOGGER.info("Config loaded, initializing metals");
             ModMetals.init();
         }
     }

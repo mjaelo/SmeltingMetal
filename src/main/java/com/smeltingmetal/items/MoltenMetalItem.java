@@ -25,8 +25,9 @@ public class MoltenMetalItem extends Item {
     public Component getName(ItemStack pStack) {
         String metalId = getMetalId(pStack);
         if (metalId != null) {
-            return Component.translatable("item." + SmeltingMetalMod.MODID + ".molten_metal_of", 
-                    Component.translatable("metal." + SmeltingMetalMod.MODID + "." + metalId));
+            String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
+            String formattedName = idPath.substring(0,1).toUpperCase() + idPath.substring(1);
+            return Component.literal("Molten " + formattedName);
         }
         return super.getName(pStack);
     }
@@ -36,8 +37,8 @@ public class MoltenMetalItem extends Item {
         super.appendHoverText(pStack, pLevel, pTooltip, pIsAdvanced);
         String metalId = getMetalId(pStack);
         if (metalId != null) {
-            pTooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".metalType", 
-                    Component.translatable("metal." + SmeltingMetalMod.MODID + "." + metalId)));
+            String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
+            pTooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".metalType", idPath));
         }
     }
 
