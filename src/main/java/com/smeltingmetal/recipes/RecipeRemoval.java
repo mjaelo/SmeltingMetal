@@ -82,6 +82,7 @@ public class RecipeRemoval {
                 }
             }
             LOGGER.info("Finished recipe replacement. Replaced {} recipes.", REPLACED_RECIPES.size());
+            replaceNuggetCraftingRecipes(recipeManager, registryAccess);
         } catch (Exception e) {
             LOGGER.error("Failed to access recipe manager fields via reflection", e);
         }
@@ -186,6 +187,49 @@ public class RecipeRemoval {
             Optional.ofNullable(ForgeRegistries.RECIPE_TYPES.getValue(new ResourceLocation(typeName))).ifPresent(recipeTypes::add);
         }
         return recipeTypes;
+    }
+
+    private static void replaceNuggetCraftingRecipes(RecipeManager recipeManager, RegistryAccess registryAccess) {
+        for (Recipe<?> recipe : recipeManager.getRecipes()) {
+            if (recipe.getType() != RecipeType.CRAFTING) continue;
+            if (!(recipe instanceof ShapedRecipe shaped)) continue;
+            // Only consider full 3x3 grid
+            if (shaped.getWidth() != 3 || shaped.getHeight() != 3) continue;
+
+            ItemStack result = shaped.getResultItem(registryAccess);
+            if (result.isEmpty() || result.getCount() != 1) continue;
+
+            ResourceLocation ingotId = ForgeRegistries.ITEMS.getKey(result.getItem());
+            String metalId = ModMetals.getMetalId(ingotId);
+            if (metalId == null) continue; // not one of our tracked metals
+
+            // derive nugget and raw ore ids
+            String base = ingotId.getPath().replace("_ingot", "").replace("ingot", "");
+            if (base.startsWith("raw_")) base = base.substring(4);
+            ResourceLocation nuggetId = new ResourceLocation(ingotId.getNamespace(), base + "_nugget");
+            ResourceLocation rawOreId = new ResourceLocation(ingotId.getNamespace(), "raw_" + base);
+
+            // ensure raw ore item exists
+            if (!ForgeRegistries.ITEMS.containsKey(rawOreId)) continue;
+
+            ItemStack nuggetStack = new ItemStack(ForgeRegistries.ITEMS.getValue(nuggetId));
+            boolean allNuggets = shaped.getIngredients().stream().allMatch(ing -> !ing.isEmpty() && ing.test(nuggetStack));
+            if (!allNuggets) continue;
+
+            // create new recipe result
+            ItemStack newResult = new ItemStack(ForgeRegistries.ITEMS.getValue(rawOreId));
+            ShapedRecipe newRecipe = new ShapedRecipe(
+                    recipe.getId(),
+                    shaped.getGroup(),
+                    shaped.category(),
+                    shaped.getWidth(), shaped.getHeight(),
+                    shaped.getIngredients(),
+                    newResult);
+
+            ORIGINAL_RECIPES.put(recipe.getId(), recipe);
+            replaceRecipeInManager(recipeManager, recipe.getId(), newRecipe);
+            LOGGER.debug("Replaced nugget crafting recipe {} with raw ore output", recipe.getId());
+        }
     }
 
     @SubscribeEvent
