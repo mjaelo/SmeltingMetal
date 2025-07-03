@@ -6,10 +6,16 @@ import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -37,8 +43,7 @@ public class MoltenMetalItem extends Item {
         super.appendHoverText(pStack, pLevel, pTooltip, pIsAdvanced);
         String metalId = getMetalId(pStack);
         if (metalId != null) {
-            String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
-            pTooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".metalType", idPath));
+            pTooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".make_filled_mold"));
         }
     }
 
@@ -66,5 +71,34 @@ public class MoltenMetalItem extends Item {
                     .orElse(null);
         }
         return null;
+    }
+
+    @Override
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        Level level = entity.level();
+        if (!level.isClientSide && (entity.isInWater() || level.getFluidState(entity.blockPosition()).is(FluidTags.WATER))) {
+            String metalId = getMetalId(stack);
+            if (metalId != null && ModMetals.doesMetalExist(metalId)) {
+                String[] parts = metalId.split(":", 2);
+                String namespace = parts.length == 2 ? parts[0] : "minecraft";
+                String path = parts.length == 2 ? parts[1] : parts[0];
+
+                ResourceLocation rawId = new ResourceLocation(namespace, "raw_" + path);
+                Item rawItem = ForgeRegistries.ITEMS.getValue(rawId);
+
+                if (rawItem == null || rawItem == Items.AIR) {
+                    // fallback to ingot
+                    rawItem = ForgeRegistries.ITEMS.getValue(getIngotId(stack));
+                }
+
+                if (rawItem != null && rawItem != Items.AIR) {
+                    ItemStack newStack = new ItemStack(rawItem, stack.getCount());
+                    entity.setItem(newStack);
+
+                    level.playSound(null, entity.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.2F);
+                }
+            }
+        }
+        return false; // keep processing normally
     }
 }

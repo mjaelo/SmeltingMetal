@@ -42,16 +42,6 @@ public class ModItems {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(CLAY_MOLD);
             event.accept(HARDENED_MOLD);
-
-            // Add all variants of molten metal
-            ModMetals.getAllMetalProperties().keySet().forEach(metalId -> {
-                event.accept(MoltenMetalItem.createStack(metalId));
-            });
-
-            // Add all variants of filled mold
-            ModMetals.getAllMetalProperties().keySet().forEach(metalId -> {
-                event.accept(FilledMoldItem.createFilledMold(metalId));
-            });
         }
     }
 

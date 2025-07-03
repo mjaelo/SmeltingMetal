@@ -12,13 +12,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.Event;
@@ -28,6 +30,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Mod.EventBusSubscriber(modid = SmeltingMetalMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -99,57 +103,151 @@ public class ModEvents {
             }
         }
 
-        @SubscribeEvent
-        public static void onPlayerRightClickItem(PlayerInteractEvent.RightClickItem event) {
-            Level level = event.getLevel();
-            Player player = event.getEntity();
-            InteractionHand hand = event.getHand();
+        /*
+         * Utility: handle molten metal in player's inventory.
+         * Converts using hardened molds, otherwise drops and damages.
+         */
+        private static void processMoltenMetal(Player player) {
+            Level level = player.level();
+            if (level.isClientSide()) return;
 
-            ItemStack mainHandItem = player.getMainHandItem();
-            ItemStack offHandItem = player.getOffhandItem();
+            int moldCount = 0;
+            List<Integer> moltenSlots = new ArrayList<>();
 
-            if (level.isClientSide()) {
-                return;
-            }
-
-            ItemStack moldStack = ItemStack.EMPTY;
-            ItemStack moltenMetalStack = ItemStack.EMPTY;
-
-            if (mainHandItem.getItem() == ModItems.HARDENED_MOLD.get() && offHandItem.getItem() instanceof MoltenMetalItem) {
-                moldStack = mainHandItem;
-                moltenMetalStack = offHandItem;
-            } else if (mainHandItem.getItem() instanceof MoltenMetalItem && offHandItem.getItem() == ModItems.HARDENED_MOLD.get()) {
-                moldStack = offHandItem;
-                moltenMetalStack = mainHandItem;
-            } else {
-                return;
-            }
-
-            if (!moldStack.isEmpty() && !moltenMetalStack.isEmpty()) {
-                String metalType = MoltenMetalItem.getMetalId(moltenMetalStack);
-
-                // Optional: You could add a check here to ensure the metalType is known by ModMetals
-                if (ModMetals.doesMetalExist(metalType) && !"unknown".equals(metalType)) {
-                    if (!player.getAbilities().instabuild) {
-                        moldStack.shrink(1);
-                        moltenMetalStack.shrink(1);
-                    }
-
-                    ItemStack filledMold = FilledMoldItem.createFilledMold(metalType);
-
-                    if (!player.getInventory().add(filledMold)) {
-                        player.drop(filledMold, false);
-                    }
-
-                    level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.BUCKET_FILL_LAVA, SoundSource.PLAYERS, 1.0F, 1.0F);
-
-                    event.setCanceled(true);
-                    event.setResult(Event.Result.ALLOW);
-                } else {
-                    LOGGER.warn("SmeltingMetalMod: Attempted to fill mold with unrecognized or unknown molten metal type: {}", metalType);
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (stack.isEmpty()) continue;
+                if (stack.getItem() == ModItems.HARDENED_MOLD.get()) {
+                    moldCount += stack.getCount();
+                } else if (stack.getItem() instanceof MoltenMetalItem) {
+                    moltenSlots.add(i);
                 }
             }
+
+            if (moltenSlots.isEmpty()) return;
+
+            // Convert as many as possible
+            if (moldCount > 0) {
+                for (int slot : moltenSlots) {
+                    if (moldCount <= 0) break;
+                    ItemStack molten = player.getInventory().getItem(slot);
+                    if (molten.isEmpty()) continue;
+
+                    String metalType = MoltenMetalItem.getMetalId(molten);
+                    if (metalType == null || !ModMetals.doesMetalExist(metalType)) continue;
+
+                    int toConvert = Math.min(moldCount, molten.getCount());
+
+                    if (!player.getAbilities().instabuild) {
+                        molten.shrink(toConvert);
+                        int shrinkLeft = toConvert;
+                        // shrink molds across inventory
+                        for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
+                            ItemStack moldStack = player.getInventory().getItem(i);
+                            if (moldStack.getItem() == ModItems.HARDENED_MOLD.get() && !moldStack.isEmpty()) {
+                                int s = Math.min(shrinkLeft, moldStack.getCount());
+                                moldStack.shrink(s);
+                                shrinkLeft -= s;
+                            }
+                        }
+                    }
+
+                    ItemStack filled = FilledMoldItem.createFilledMold(metalType);
+                    filled.setCount(toConvert);
+                    if (!player.getInventory().add(filled)) {
+                        player.drop(filled, false);
+                    }
+
+                    moldCount -= toConvert;
+                }
+            }
+
+            // Drop any remaining molten metal and damage
+            boolean moltenLeft = false;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (!stack.isEmpty() && stack.getItem() instanceof MoltenMetalItem) {
+                    moltenLeft = true;
+                    ItemStack copy = stack.copy();
+                    player.getInventory().removeItem(stack);
+                    player.drop(copy, false);
+                }
+            }
+
+            if (moltenLeft) {
+                player.hurt(level.damageSources().lava(), 4.0F);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onItemPickup(EntityItemPickupEvent event) {
+            ItemEntity itemEntity = event.getItem();
+            ItemStack pickedStack = itemEntity.getItem();
+
+            if (!(pickedStack.getItem() instanceof MoltenMetalItem)) {
+                return; // Not molten metal, let vanilla handle
+            }
+
+            Player player = event.getEntity();
+
+            // Count hardened molds in player inventory
+            int moldCount = 0;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack slot = player.getInventory().getItem(i);
+                if (!slot.isEmpty() && slot.getItem() == ModItems.HARDENED_MOLD.get()) {
+                    moldCount += slot.getCount();
+                }
+            }
+
+            if (moldCount > 0) {
+                // Convert up to mold count
+                String metalType = MoltenMetalItem.getMetalId(pickedStack);
+                if (metalType != null && ModMetals.doesMetalExist(metalType)) {
+                    int convert = Math.min(moldCount, pickedStack.getCount());
+
+                    // Shrink molds
+                    if (!player.getAbilities().instabuild) {
+                        int shrinkLeft = convert;
+                        for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
+                            ItemStack moldStack = player.getInventory().getItem(i);
+                            if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
+                                int s = Math.min(shrinkLeft, moldStack.getCount());
+                                moldStack.shrink(s);
+                                shrinkLeft -= s;
+                            }
+                        }
+                    }
+
+                    // Give filled molds
+                    ItemStack filled = FilledMoldItem.createFilledMold(metalType);
+                    filled.setCount(convert);
+                    if (!player.getInventory().add(filled)) {
+                        player.drop(filled, false);
+                    }
+
+                    // Reduce or remove picked stack
+                    if (pickedStack.getCount() > convert) {
+                        pickedStack.shrink(convert);
+                        // leave remaining molten metal entity in world with pickup delay
+                        itemEntity.setPickUpDelay(40);
+                    } else {
+                        itemEntity.discard();
+                    }
+
+                    // Cancel default pickup handling
+                    event.setCanceled(true);
+                }
+            } else {
+                // No molds – damage player and keep item in world
+                player.hurt(player.level().damageSources().lava(), 4.0F);
+                itemEntity.setPickUpDelay(40);
+                event.setCanceled(true);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onContainerClose(PlayerContainerEvent.Close event) {
+            processMoltenMetal(event.getEntity());
         }
     }
 }

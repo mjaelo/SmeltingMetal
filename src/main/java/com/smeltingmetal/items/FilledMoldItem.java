@@ -51,7 +51,6 @@ public class FilledMoldItem extends Item {
         String metalType = getMetalType(pStack);
         if (!"unknown".equals(metalType)) {
             String idPath = metalType.contains(":") ? metalType.split(":")[1] : metalType;
-            pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".metalType", idPath));
             pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".cool_in_water"));
         } else {
             pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".unknown_metal"));
