@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
@@ -73,10 +74,15 @@ public class MoltenMetalItem extends Item {
         return null;
     }
 
+    private static final int COOL_TICKS = 150; // ~8 seconds (15 tps)
+
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
         Level level = entity.level();
-        if (!level.isClientSide && (entity.isInWater() || level.getFluidState(entity.blockPosition()).is(FluidTags.WATER))) {
+        boolean isInWater = level.getFluidState(entity.blockPosition()).is(FluidTags.WATER);
+        boolean isOnFire = level.getBlockState(entity.blockPosition()).is(Blocks.FIRE);
+        boolean shouldCool = !isOnFire && (entity.getAge() >= COOL_TICKS || isInWater) ;
+        if (!level.isClientSide && shouldCool) {
             String metalId = getMetalId(stack);
             if (metalId != null && ModMetals.doesMetalExist(metalId)) {
                 String[] parts = metalId.split(":", 2);

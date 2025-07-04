@@ -30,7 +30,7 @@ public class ModItems {
 
     // Filled mold items
     public static final RegistryObject<FilledMoldItem> FILLED_MOLD = ITEMS.register("filled_mold",
-            () -> new FilledMoldItem(new Item.Properties().stacksTo(1)));
+            () -> new FilledMoldItem(new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
