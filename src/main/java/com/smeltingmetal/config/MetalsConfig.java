@@ -26,6 +26,7 @@ public class MetalsConfig {
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> recipeTypes;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
         
         private static final Predicate<Object> METAL_DEFINITION_VALIDATOR = 
             obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+=[a-z0-9_.-]+:[a-z0-9_.-]+$");
@@ -65,6 +66,12 @@ public class MetalsConfig {
                     defaultRecipeTypes,
                     RECIPE_TYPE_VALIDATOR
                 );
+            
+            // Blacklisted substrings for ingredients / items (e.g., block, nugget)
+            List<String> defaultBlacklist = List.of("block", "nugget");
+            blacklistKeywords = builder
+                .comment("List of substrings; if an ingredient's registry path contains any of these, the recipe is skipped from molten replacement")
+                .defineList("blacklist_keywords", defaultBlacklist, RECIPE_TYPE_VALIDATOR);
             
             builder.pop();
         }
