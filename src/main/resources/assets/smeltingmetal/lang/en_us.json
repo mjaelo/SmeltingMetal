@@ -1,8 +1,10 @@
 {
   "item.smeltingmetal.clay_mold": "Clay Mold",
   "item.smeltingmetal.hardened_mold": "Hardened Mold",
+  "item.smeltingmetal.netherite_mold": "Netherite Mold",
   "item.smeltingmetal.molten_metal_of": "Molten %s",
   "item.smeltingmetal.filled_mold_of": "Filled %s Mold",
+  "item.smeltingmetal.filled_netherite_mold_of": "Filled %s Netherite Mold",
 
   "metal.smeltingmetal.unknown": "Unknown Metal",
 

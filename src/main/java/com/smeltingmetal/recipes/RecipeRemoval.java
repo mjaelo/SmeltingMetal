@@ -349,6 +349,10 @@ public class RecipeRemoval {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
+        // Ensure static reference is ready
+        SmeltingMetalMod.setRecipeManager(event.getServer().getRecipeManager());
+        SmeltingMetalMod.setServer(event.getServer());
+
         LOGGER.info("Server started, triggering initial recipe replacement.");
         replaceRecipes();
     }

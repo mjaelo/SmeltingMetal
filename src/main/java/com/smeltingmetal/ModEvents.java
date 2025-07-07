@@ -3,6 +3,7 @@ package com.smeltingmetal;
 import com.mojang.logging.LogUtils;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.items.FilledMoldItem;
+import com.smeltingmetal.items.FilledNetheriteMoldItem;
 import com.smeltingmetal.items.MoltenMetalItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -58,7 +59,10 @@ public class ModEvents {
         public static void onRightClickBlock(PlayerInteractEvent.@NotNull RightClickBlock event) {
             ItemStack heldItem = event.getItemStack();
             Level level = event.getLevel();
-            if (level.isClientSide() || !(heldItem.getItem() instanceof FilledMoldItem)) {
+            boolean isFilledMold = heldItem.getItem() == ModItems.FILLED_MOLD.get();
+            boolean isFilledNetherite = heldItem.getItem() == ModItems.FILLED_NETHERITE_MOLD.get();
+
+            if (level.isClientSide() || (!isFilledMold && !isFilledNetherite)) {
                 return;
             }
 
@@ -71,7 +75,7 @@ public class ModEvents {
             if (!isWaterBlock && !isWaterFluid) {
                 return;
             }
-            String metalType = FilledMoldItem.getMetalType(heldItem);
+            String metalType = isFilledMold ? FilledMoldItem.getMetalType(heldItem) : com.smeltingmetal.items.FilledNetheriteMoldItem.getMetalType(heldItem);
             Optional<MetalProperties> metalProps = ModMetals.getMetalProperties(metalType);
 
             if (metalProps.isPresent()) {
@@ -83,8 +87,17 @@ public class ModEvents {
                             heldItem.shrink(1);
                         }
 
+                        // give ingot
                         if (!serverPlayer.getInventory().add(new ItemStack(ingotItem))) {
                             serverPlayer.drop(new ItemStack(ingotItem), false);
+                        }
+
+                        // if netherite variant, also give back empty mold
+                        if (isFilledNetherite) {
+                            ItemStack moldStack = new ItemStack(ModItems.NETHERITE_MOLD.get());
+                            if (!serverPlayer.getInventory().add(moldStack)) {
+                                serverPlayer.drop(moldStack, false);
+                            }
                         }
 
                         level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.8F, 1.5F + level.random.nextFloat() * 0.5F);
@@ -118,7 +131,7 @@ public class ModEvents {
             int moldCount = 0;
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                 ItemStack slot = player.getInventory().getItem(i);
-                if (!slot.isEmpty() && slot.getItem() == ModItems.HARDENED_MOLD.get()) {
+                if (!slot.isEmpty() && (slot.getItem() == ModItems.HARDENED_MOLD.get() || slot.getItem() == ModItems.NETHERITE_MOLD.get())) {
                     moldCount += slot.getCount();
                 }
             }
@@ -129,36 +142,52 @@ public class ModEvents {
                 if (metalType != null && ModMetals.doesMetalExist(metalType)) {
                     int convert = Math.min(moldCount, pickedStack.getCount());
 
-                    // Shrink molds
-                    if (!player.getAbilities().instabuild) {
-                        int shrinkLeft = convert;
-                        for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
-                            ItemStack moldStack = player.getInventory().getItem(i);
-                            if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
-                                int s = Math.min(shrinkLeft, moldStack.getCount());
+                    int shrinkLeft = convert;
+                    int netheriteUsed = 0;
+                    for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
+                        ItemStack moldStack = player.getInventory().getItem(i);
+                        if (moldStack.isEmpty()) continue;
+                        if (moldStack.getItem() == ModItems.NETHERITE_MOLD.get()) {
+                            int s = Math.min(shrinkLeft, moldStack.getCount());
+                            if (!player.getAbilities().instabuild) {
                                 moldStack.shrink(s);
-                                shrinkLeft -= s;
                             }
+                            shrinkLeft -= s;
+                            netheriteUsed += s;
+                        } else if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
+                            int s = Math.min(shrinkLeft, moldStack.getCount());
+                            if (!player.getAbilities().instabuild) {
+                                moldStack.shrink(s);
+                            }
+                            shrinkLeft -= s;
                         }
                     }
 
-                    // Give filled molds
-                    ItemStack filled = FilledMoldItem.createFilledMold(metalType);
-                    filled.setCount(convert);
-                    if (!player.getInventory().add(filled)) {
-                        player.drop(filled, false);
+                    // Give filled molds according to mold type used
+                    if (netheriteUsed > 0) {
+                        ItemStack filledNeth = FilledNetheriteMoldItem.createFilled(metalType);
+                        filledNeth.setCount(netheriteUsed);
+                        if (!player.getInventory().add(filledNeth)) {
+                            player.drop(filledNeth, false);
+                        }
+                    }
+                    int hardenedUsed = convert - netheriteUsed;
+                    if (hardenedUsed > 0) {
+                        ItemStack filledHard = FilledMoldItem.createFilledMold(metalType);
+                        filledHard.setCount(hardenedUsed);
+                        if (!player.getInventory().add(filledHard)) {
+                            player.drop(filledHard, false);
+                        }
                     }
 
                     // Reduce or remove picked stack
                     if (pickedStack.getCount() > convert) {
                         pickedStack.shrink(convert);
-                        // leave remaining molten metal entity in world with pickup delay
                         itemEntity.setPickUpDelay(40);
                     } else {
                         itemEntity.discard();
                     }
 
-                    // Cancel default pickup handling
                     event.setCanceled(true);
                 }
             } else {
@@ -181,7 +210,7 @@ public class ModEvents {
             for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                 ItemStack stack = player.getInventory().getItem(i);
                 if (stack.isEmpty()) continue;
-                if (stack.getItem() == ModItems.HARDENED_MOLD.get()) {
+                if (stack.getItem() == ModItems.HARDENED_MOLD.get() || stack.getItem() == ModItems.NETHERITE_MOLD.get()) {
                     moldCount += stack.getCount();
                 } else if (stack.getItem() instanceof MoltenMetalItem) {
                     moltenSlots.add(i);
@@ -202,24 +231,42 @@ public class ModEvents {
 
                     int toConvert = Math.min(moldCount, molten.getCount());
 
-                    if (!player.getAbilities().instabuild) {
-                        molten.shrink(toConvert);
-                        int shrinkLeft = toConvert;
-                        // shrink molds across inventory
-                        for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
-                            ItemStack moldStack = player.getInventory().getItem(i);
-                            if (moldStack.getItem() == ModItems.HARDENED_MOLD.get() && !moldStack.isEmpty()) {
-                                int s = Math.min(shrinkLeft, moldStack.getCount());
+                    molten.shrink(toConvert);
+                    int shrinkLeft2 = toConvert;
+                    int netheriteUsed2 = 0;
+                    for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft2 > 0; i++) {
+                        ItemStack moldStack = player.getInventory().getItem(i);
+                        if (moldStack.isEmpty()) continue;
+                        if (moldStack.getItem() == ModItems.NETHERITE_MOLD.get()) {
+                            int s = Math.min(shrinkLeft2, moldStack.getCount());
+                            if (!player.getAbilities().instabuild) {
                                 moldStack.shrink(s);
-                                shrinkLeft -= s;
                             }
+                            shrinkLeft2 -= s;
+                            netheriteUsed2 += s;
+                        } else if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
+                            int s = Math.min(shrinkLeft2, moldStack.getCount());
+                            if (!player.getAbilities().instabuild) {
+                                moldStack.shrink(s);
+                            }
+                            shrinkLeft2 -= s;
                         }
                     }
 
-                    ItemStack filled = FilledMoldItem.createFilledMold(metalType);
-                    filled.setCount(toConvert);
-                    if (!player.getInventory().add(filled)) {
-                        player.drop(filled, false);
+                    if (netheriteUsed2 > 0) {
+                        ItemStack filledNeth = FilledNetheriteMoldItem.createFilled(metalType);
+                        filledNeth.setCount(netheriteUsed2);
+                        if (!player.getInventory().add(filledNeth)) {
+                            player.drop(filledNeth, false);
+                        }
+                    }
+                    int hardenedUsed2 = toConvert - netheriteUsed2;
+                    if (hardenedUsed2 > 0) {
+                        ItemStack filledHard = FilledMoldItem.createFilledMold(metalType);
+                        filledHard.setCount(hardenedUsed2);
+                        if (!player.getInventory().add(filledHard)) {
+                            player.drop(filledHard, false);
+                        }
                     }
 
                     moldCount -= toConvert;

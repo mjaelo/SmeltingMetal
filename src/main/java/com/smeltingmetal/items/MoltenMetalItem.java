@@ -3,25 +3,22 @@ package com.smeltingmetal.items;
 import com.smeltingmetal.ModItems;
 import com.smeltingmetal.ModMetals;
 import com.smeltingmetal.SmeltingMetalMod;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class MoltenMetalItem extends Item {
+public class MoltenMetalItem extends CoolingItem {
     public static final String METAL_ID_KEY = "MetalID";
 
     public MoltenMetalItem(Properties properties) {
@@ -74,37 +71,33 @@ public class MoltenMetalItem extends Item {
         return null;
     }
 
-    private static final int COOL_TICKS = 150; // ~8 seconds (15 tps)
+    @Override
+    protected ItemStack getCooledItem(ItemStack stack, Level level, BlockPos pos) {
+        String metalId = getMetalId(stack);
+        if (metalId == null || !ModMetals.doesMetalExist(metalId)) {
+            return null;
+        }
+
+        String[] parts = metalId.split(":", 2);
+        String namespace = parts.length == 2 ? parts[0] : "minecraft";
+        String path = parts.length == 2 ? parts[1] : parts[0];
+
+        // First try to get raw item
+        Item rawItem = CoolingItem.getItem(new ResourceLocation(namespace, "raw_" + path));
+        
+        // Fall back to ingot if raw item doesn't exist
+        if (rawItem == null || rawItem == Items.AIR) {
+            rawItem = CoolingItem.getItem(getIngotId(stack));
+        }
+
+        if (rawItem != null && rawItem != Items.AIR) {
+            return new ItemStack(rawItem, stack.getCount());
+        }
+        return null;
+    }
 
     @Override
-    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        Level level = entity.level();
-        boolean isInWater = level.getFluidState(entity.blockPosition()).is(FluidTags.WATER);
-        boolean isOnFire = level.getBlockState(entity.blockPosition()).is(Blocks.FIRE);
-        boolean shouldCool = !isOnFire && (entity.getAge() >= COOL_TICKS || isInWater) ;
-        if (!level.isClientSide && shouldCool) {
-            String metalId = getMetalId(stack);
-            if (metalId != null && ModMetals.doesMetalExist(metalId)) {
-                String[] parts = metalId.split(":", 2);
-                String namespace = parts.length == 2 ? parts[0] : "minecraft";
-                String path = parts.length == 2 ? parts[1] : parts[0];
-
-                ResourceLocation rawId = new ResourceLocation(namespace, "raw_" + path);
-                Item rawItem = ForgeRegistries.ITEMS.getValue(rawId);
-
-                if (rawItem == null || rawItem == Items.AIR) {
-                    // fallback to ingot
-                    rawItem = ForgeRegistries.ITEMS.getValue(getIngotId(stack));
-                }
-
-                if (rawItem != null && rawItem != Items.AIR) {
-                    ItemStack newStack = new ItemStack(rawItem, stack.getCount());
-                    entity.setItem(newStack);
-
-                    level.playSound(null, entity.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.2F);
-                }
-            }
-        }
-        return false; // keep processing normally
+    protected void onCooled(ItemStack originalStack, ItemStack cooledStack, Level level, BlockPos pos) {
+        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.0F);
     }
 }

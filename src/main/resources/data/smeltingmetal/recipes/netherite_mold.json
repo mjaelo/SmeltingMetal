@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    "C C",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:netherite_scrap"
+    }
+  },
+  "result": {
+    "item": "smeltingmetal:netherite_mold",
+    "count": 4
+  }
+}

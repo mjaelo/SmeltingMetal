@@ -1,6 +1,7 @@
 package com.smeltingmetal;
 
 import com.smeltingmetal.items.FilledMoldItem;
+import com.smeltingmetal.items.FilledNetheriteMoldItem;
 import com.smeltingmetal.items.MoltenMetalItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -24,6 +25,9 @@ public class ModItems {
     public static final RegistryObject<Item> HARDENED_MOLD = ITEMS.register("hardened_mold",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> NETHERITE_MOLD = ITEMS.register("netherite_mold",
+            () -> new Item(new Item.Properties()));
+
     // Generic Molten Metal Item
     public static final RegistryObject<Item> MOLTEN_METAL = ITEMS.register("molten_metal",
             () -> new MoltenMetalItem(new Item.Properties().stacksTo(1)));
@@ -31,6 +35,9 @@ public class ModItems {
     // Filled mold items
     public static final RegistryObject<FilledMoldItem> FILLED_MOLD = ITEMS.register("filled_mold",
             () -> new FilledMoldItem(new Item.Properties()));
+
+    public static final RegistryObject<FilledNetheriteMoldItem> FILLED_NETHERITE_MOLD = ITEMS.register("filled_netherite_mold",
+            () -> new FilledNetheriteMoldItem(new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
@@ -42,6 +49,7 @@ public class ModItems {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(CLAY_MOLD);
             event.accept(HARDENED_MOLD);
+            event.accept(NETHERITE_MOLD);
         }
     }
 
