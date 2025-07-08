@@ -5,6 +5,13 @@
   "item.smeltingmetal.molten_metal_of": "Molten %s",
   "item.smeltingmetal.filled_mold_of": "Filled %s Mold",
   "item.smeltingmetal.filled_netherite_mold_of": "Filled %s Netherite Mold",
+  "item.smeltingmetal.metal_case": "Metal Case",
+  "item.smeltingmetal.netherite_metal_case": "Netherite Metal Case",
+  "item.smeltingmetal.clay_case": "Clay Case",
+  "block.smeltingmetal.metal_case": "Metal Case",
+  "block.smeltingmetal.netherite_metal_case": "Netherite Metal Case",
+  "block.smeltingmetal.clay_case": "Clay Case",
+  "item.smeltingmetal.molten_metal_block": "Block of Molten Metal",
 
   "metal.smeltingmetal.unknown": "Unknown Metal",
 

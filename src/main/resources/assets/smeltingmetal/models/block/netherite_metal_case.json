@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "smeltingmetal:block/netherite_metal_case_top",
+    "bottom": "smeltingmetal:block/netherite_metal_case",
+    "side": "smeltingmetal:block/netherite_metal_case"
+  }
+}

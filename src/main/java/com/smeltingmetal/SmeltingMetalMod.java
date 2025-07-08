@@ -41,6 +41,8 @@ public class SmeltingMetalMod {
         
         // Register items and recipes
         ModItems.ITEMS.register(modEventBus);
+        ModBlocks.BLOCKS.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModRecipes.SERIALIZERS.register(modEventBus);
         
         // Initialize metals from config - will be refreshed on config loading event

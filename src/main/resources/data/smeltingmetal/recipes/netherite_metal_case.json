@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "sss",
+    "s s",
+    "sss"
+  ],
+  "key": {
+    "s": {
+      "item": "minecraft:netherite_scrap"
+    }
+  },
+  "result": {
+    "item": "smeltingmetal:netherite_metal_case",
+    "count": 1
+  }
+}

@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.items.FilledMoldItem;
 import com.smeltingmetal.items.FilledNetheriteMoldItem;
+import com.smeltingmetal.items.MoltenMetalBlockItem;
 import com.smeltingmetal.items.MoltenMetalItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -15,6 +16,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -121,6 +123,38 @@ public class ModEvents {
             ItemEntity itemEntity = event.getItem();
             ItemStack pickedStack = itemEntity.getItem();
 
+            // --------- Handle molten metal BLOCK pickup restriction ----------
+            if (pickedStack.getItem() instanceof MoltenMetalBlockItem blockItem) {
+                Player player = event.getEntity();
+                // Search inventory for first empty bucket
+                ItemStack bucketStack = ItemStack.EMPTY;
+                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                    ItemStack slot = player.getInventory().getItem(i);
+                    if (!slot.isEmpty() && slot.getItem() == Items.BUCKET) {
+                        bucketStack = slot;
+                        break;
+                    }
+                }
+
+                if (!bucketStack.isEmpty()) {
+                    String metalId = MoltenMetalBlockItem.getMetalId(pickedStack);
+                    if (metalId != null) {
+                        ItemStack moltenBucket = com.smeltingmetal.items.MoltenMetalBucketItem.createStack(metalId);
+                        if (!player.getInventory().add(moltenBucket)) player.drop(moltenBucket, false);
+                        bucketStack.shrink(1);
+                        itemEntity.discard(); // remove ground item
+                        event.setCanceled(true);
+                        return;
+                    }
+                }
+
+                // Otherwise hurt player and keep on ground (can't pick up)
+                player.hurt(player.damageSources().lava(), 4f);
+                event.setCanceled(true);
+                return;
+            }
+            // --------- End molten metal BLOCK pickup restriction ----------
+
             if (!(pickedStack.getItem() instanceof MoltenMetalItem)) {
                 return; // Not molten metal, let vanilla handle
             }
@@ -200,6 +234,42 @@ public class ModEvents {
 
         @SubscribeEvent
         public static void onContainerClose(PlayerContainerEvent.Close event) {
+            Player player = event.getEntity();
+            // scan all slots of the closing container for molten metal BLOCK items
+            List<Slot> slots = event.getContainer().slots;
+            for (Slot slot : slots) {
+                ItemStack stack = slot.getItem();
+                if (stack.getItem() instanceof MoltenMetalBlockItem) {
+                    // look for bucket in player inventory
+                    ItemStack bucketStack = ItemStack.EMPTY;
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack inv = player.getInventory().getItem(i);
+                        if (!inv.isEmpty() && inv.getItem() == Items.BUCKET) {
+                            bucketStack = inv;
+                            break;
+                        }
+                    }
+                    if (!bucketStack.isEmpty()) {
+                        String metalId = MoltenMetalBlockItem.getMetalId(stack);
+                        if (metalId != null) {
+                            ItemStack moltenBucket = com.smeltingmetal.items.MoltenMetalBucketItem.createStack(metalId);
+                            if (!player.getInventory().add(moltenBucket)) player.drop(moltenBucket, false);
+                            bucketStack.shrink(1);
+                            slot.set(ItemStack.EMPTY);
+                        }
+                    } else {
+                        // no bucket – push stack out into world and clear slot
+                        player.hurt(player.damageSources().lava(), 4f);
+                        ItemEntity e = new ItemEntity(player.level(), player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
+                        player.level().addFreshEntity(e);
+                        slot.set(ItemStack.EMPTY);
+                    }
+                }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onContainerClose2(PlayerContainerEvent.Close event) {
             Player player = event.getEntity();
             Level level = player.level();
             if (level.isClientSide()) return;
