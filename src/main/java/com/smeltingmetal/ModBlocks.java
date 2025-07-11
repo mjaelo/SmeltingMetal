@@ -7,7 +7,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -27,30 +26,30 @@ public class ModBlocks {
 
     // ---------------------- CASE BLOCKS --------------------------
     public static final RegistryObject<Block> CLAY_CASE = BLOCKS.register("clay_case",
-            () -> new Block(BlockBehaviour.Properties.copy(Blocks.TERRACOTTA)
-                    .strength(1.0F, 4.0F)
-                    .sound(SoundType.DECORATED_POT)
+            () -> new Block(BlockBehaviour.Properties.copy(Blocks.DIRT)
+                    .strength(0.1F, .5F)
+                    .sound(SoundType.MUD)
                     .noOcclusion()
-                    .pushReaction(PushReaction.BLOCK)));
+                    .dropsLike(Blocks.CLAY)
+                    ));
 
     public static final RegistryObject<Block> METAL_CASE = BLOCKS.register("metal_case",
-            () -> new MetalCaseBlock(BlockBehaviour.Properties.copy(Blocks.TERRACOTTA)
-                    .strength(1.5F, 6.0F) // similar to terracotta but slightly stronger
-                    .sound(SoundType.DECORATED_POT) // still plays metal sound
+            () -> new MetalCaseBlock(BlockBehaviour.Properties.copy(Blocks.DIRT)
+                    .strength(.5F, 1.0F)
+                    .sound(SoundType.DECORATED_POT)
                     .noOcclusion()
-                    .pushReaction(PushReaction.BLOCK)));
+                    ));
 
     public static final RegistryObject<Block> NETHERITE_METAL_CASE = BLOCKS.register("netherite_metal_case",
             () -> new NetheriteCaseBlock(BlockBehaviour.Properties.copy(Blocks.NETHERITE_BLOCK)
-                    .strength(50.0F, 2400.0F) // stronger than metal version
+                    .strength(1.0F, 2.0F)
                     .sound(SoundType.NETHERITE_BLOCK)
                     .noOcclusion()
-                    .pushReaction(PushReaction.BLOCK)));
+                    ));
 
     // ---------------------- BLOCK ITEM REGISTRATION --------------
     private static void registerBlockItems(IEventBus bus) {
         ModItems.ITEMS.register(bus);
-        // We purposefully attach the block-items inside an enqueueWork call in ModItems
     }
 
     public static void register(IEventBus bus) {
@@ -61,9 +60,9 @@ public class ModBlocks {
     @SubscribeEvent
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
-            event.accept(CLAY_CASE.get());
-            event.accept(METAL_CASE.get());
-            event.accept(NETHERITE_METAL_CASE.get());
+            event.accept(ModItems.CLAY_CASE.get());
+            event.accept(ModItems.METAL_CASE.get());
+            event.accept(ModItems.NETHERITE_METAL_CASE.get());
         }
     }
 

@@ -27,6 +27,10 @@ public class RecipeRemoval {
     private static final Map<ResourceLocation, Recipe<?>> ORIGINAL_RECIPES = new HashMap<>();
     private static final Set<ResourceLocation> REPLACED_RECIPES = new HashSet<>();
 
+    /**
+     * Restores all original recipes that were replaced by this mod.
+     * Called when recipes are reloaded to ensure clean state.
+     */
     public static void restoreRecipes() {
         if (ORIGINAL_RECIPES.isEmpty()) return;
         RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
@@ -38,6 +42,10 @@ public class RecipeRemoval {
         REPLACED_RECIPES.clear();
     }
 
+    /**
+     * Replaces vanilla smelting recipes with custom molten metal recipes.
+     * Processes all cooking recipes and modifies them to output molten metals.
+     */
     public static void replaceRecipes() {
         RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
         if (recipeManager == null) return;
@@ -138,6 +146,13 @@ public class RecipeRemoval {
         }
     }
 
+    /**
+     * Creates a new cooking recipe that outputs a molten metal item.
+     * @param originalRecipe The original recipe to base the new one on
+     * @param originalIngotId The ID of the original ingot being replaced
+     * @param registryAccess Registry access for recipe operations
+     * @return A new recipe that outputs molten metal, or null if invalid
+     */
     private static Recipe<?> createMoltenMetalRecipe(Recipe<?> originalRecipe, ResourceLocation originalIngotId, RegistryAccess registryAccess) {
         String metalId = ModMetals.getMetalId(originalIngotId);
         if (metalId == null) return null;
@@ -166,6 +181,13 @@ public class RecipeRemoval {
         return null;
     }
 
+    /**
+     * Creates a new cooking recipe with a different output item.
+     * Preserves all other properties from the original recipe.
+     * @param originalRecipe The recipe to copy properties from
+     * @param newResult The new output item stack
+     * @return A new recipe with the updated output, or null if type is unsupported
+     */
     private static Recipe<?> replaceCookingResult(Recipe<?> originalRecipe, ItemStack newResult) {
         if (!(originalRecipe instanceof AbstractCookingRecipe acr)) return null;
         Ingredient ing = acr.getIngredients().get(0);
@@ -186,6 +208,12 @@ public class RecipeRemoval {
         return null;
     }
 
+    /**
+     * Replaces a recipe in the recipe manager using reflection.
+     * @param recipeManager The recipe manager to modify
+     * @param recipeId The ID of the recipe to replace
+     * @param newRecipe The new recipe to insert
+     */
     private static void replaceRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
         try {
             Field recipesField = getRecipesField();
@@ -209,6 +237,11 @@ public class RecipeRemoval {
         }
     }
 
+    /**
+     * Gets the private recipes field from RecipeManager using reflection.
+     * @return The accessible recipes field
+     * @throws NoSuchFieldException If the field cannot be found
+     */
     private static Field getRecipesField() throws NoSuchFieldException {
         // Try known names first
         try {
@@ -250,6 +283,10 @@ public class RecipeRemoval {
         throw new NoSuchFieldException("Could not find byName field in RecipeManager (obfuscation mismatch)");
     }
 
+    /**
+     * Gets the set of recipe types that should be processed for replacement.
+     * @return Set of recipe types to process (smelting, blasting, etc.)
+     */
     private static Set<RecipeType<?>> getTargetRecipeTypes() {
         Set<RecipeType<?>> recipeTypes = new HashSet<>();
         if (MetalsConfig.CONFIG == null || MetalsConfig.CONFIG.recipeTypes == null) return recipeTypes;
@@ -303,7 +340,9 @@ public class RecipeRemoval {
     }
 
     /**
-     * If result is ingot returns same id, if nugget returns matching ingot id, otherwise null.
+     * Derives an ingot ID from a result ID.
+     * @param resultId The result item ID to process
+     * @return The corresponding ingot ID, or null if not applicable
      */
     private static ResourceLocation deriveIngotId(ResourceLocation resultId) {
         if (resultId == null) return null;
@@ -316,6 +355,11 @@ public class RecipeRemoval {
         return null;
     }
 
+    /**
+     * Detects metal type from a result item's name.
+     * @param resultId The result item ID to analyze
+     * @return The metal key if detected, null otherwise
+     */
     private static String detectMetalFromResultName(ResourceLocation resultId) {
         if (resultId == null) return null;
         String path = resultId.getPath().toLowerCase();
@@ -329,6 +373,11 @@ public class RecipeRemoval {
         return null;
     }
 
+    /**
+     * Checks if a recipe's input items match any blacklisted keywords.
+     * @param recipe The recipe to check
+     * @return true if any input is blacklisted, false otherwise
+     */
     private static boolean recipeInputBlacklisted(Recipe<?> recipe) {
         if (!(recipe instanceof AbstractCookingRecipe cooking)) return false;
         if (cooking.getIngredients().isEmpty()) return false;
@@ -344,6 +393,12 @@ public class RecipeRemoval {
         return false;
     }
 
+    /**
+     * Adds missing molten metal recipes for metal items that don't have them.
+     * @param recipeManager The recipe manager to add recipes to
+     * @param registryAccess Registry access for recipe operations
+     * @param targetTypes The recipe types to create recipes for
+     */
     private static void addMissingMetalItemRecipes(RecipeManager recipeManager, RegistryAccess registryAccess, Set<RecipeType<?>> targetTypes) {
         for (Item item : ForgeRegistries.ITEMS) {
             ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(item);
@@ -394,6 +449,12 @@ public class RecipeRemoval {
         }
     }
 
+    /**
+     * Adds recipes for smelting raw metal blocks into molten metal blocks.
+     * Handles both vanilla-style raw items and direct raw blocks.
+     * @param recipeManager The recipe manager to add recipes to
+     * @param registryAccess Registry access for recipe operations
+     */
     private static void addRawBlockMoltenRecipes(RecipeManager recipeManager, RegistryAccess registryAccess) {
         for (Recipe<?> recipe : recipeManager.getRecipes()) {
             if (!(recipe instanceof AbstractCookingRecipe acr)) continue;
@@ -448,6 +509,10 @@ public class RecipeRemoval {
         }
     }
 
+    /**
+     * Removes vanilla block crafting recipes to prevent duplication with smelting.
+     * @param recipesByType Map of recipe types to their recipes
+     */
     private static void removeBlockCraftingRecipes(Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType) {
         Map<ResourceLocation, Recipe<?>> crafting = recipesByType.get(RecipeType.CRAFTING);
         if (crafting == null) return;
@@ -483,6 +548,10 @@ public class RecipeRemoval {
         REPLACED_RECIPES.addAll(toRemove);
     }
 
+    /**
+     * Handles server start event to initialize recipe replacement.
+     * @param event The server started event
+     */
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
         // Ensure static reference is ready
@@ -493,6 +562,10 @@ public class RecipeRemoval {
         replaceRecipes();
     }
 
+    /**
+     * Handles recipe reload events to ensure proper recipe replacement.
+     * @param event The reload event
+     */
     @SubscribeEvent
     public static void onReload(AddReloadListenerEvent event) {
         restoreRecipes();

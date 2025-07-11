@@ -47,10 +47,6 @@ public class MoltenMetalBucketItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        String metalId = getMetalId(stack);
-        if (metalId != null) {
-            tooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".molten_bucket_metal", metalId));
-        }
-        tooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".molten_bucket_use"));
+        tooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".bucket_use"));
     }
 }

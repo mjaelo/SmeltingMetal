@@ -45,9 +45,6 @@ public class SmeltingMetalMod {
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModRecipes.SERIALIZERS.register(modEventBus);
         
-        // Initialize metals from config - will be refreshed on config loading event
-        //ModMetals.init();
-        
         // Register to the mod event bus for recipe handling
         modEventBus.addListener(this::onRegisterRecipes);
         

@@ -69,11 +69,6 @@ public class ModItems {
             event.accept(CLAY_MOLD);
             event.accept(HARDENED_MOLD);
             event.accept(NETHERITE_MOLD);
-            event.accept(METAL_CASE);
-            event.accept(NETHERITE_METAL_CASE);
-            event.accept(MOLTEN_METAL_BLOCK);
-            event.accept(MOLTEN_METAL_BUCKET);
-            event.accept(CLAY_CASE);
         }
     }
 
