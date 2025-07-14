@@ -13,8 +13,8 @@ public class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, SmeltingMetalMod.MODID);
 
-    public static final RegistryObject<BlockEntityType<MetalCaseBlockEntity>> METAL_CASE = BLOCK_ENTITIES.register(
-            "metal_case", () -> BlockEntityType.Builder.of(MetalCaseBlockEntity::new, ModBlocks.METAL_CASE.get(), ModBlocks.NETHERITE_METAL_CASE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<MetalCaseBlockEntity>> hardened_case = BLOCK_ENTITIES.register(
+            "hardened_case", () -> BlockEntityType.Builder.of(MetalCaseBlockEntity::new, ModBlocks.HARDENED_CASE.get(), ModBlocks.NETHERITE_CASE.get()).build(null));
 
     public static void register(IEventBus bus) {
         BLOCK_ENTITIES.register(bus);

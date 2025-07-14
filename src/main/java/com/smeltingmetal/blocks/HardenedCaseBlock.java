@@ -31,9 +31,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Generic implementation shared by both MetalCase and NetheriteCase blocks. TODO rename to clay case?
+ * Generic implementation shared by both MetalCase and NetheriteCase blocks.
  */
-public class MetalCaseBlock extends Block implements EntityBlock {
+public class HardenedCaseBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     // 0 = empty, 1 = filled
@@ -42,11 +42,11 @@ public class MetalCaseBlock extends Block implements EntityBlock {
 
     private final boolean returnsCase; // netherite variant returns empty case
 
-    public MetalCaseBlock(Properties props) {
+    public HardenedCaseBlock(Properties props) {
         this(props, false);
     }
 
-    protected MetalCaseBlock(Properties props, boolean returnsCase) {
+    protected HardenedCaseBlock(Properties props, boolean returnsCase) {
         super(props);
         this.returnsCase = returnsCase;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(FILL, 0).setValue(WATERLOGGED, false));
@@ -96,7 +96,7 @@ public class MetalCaseBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return type == ModBlockEntities.METAL_CASE.get() && !level.isClientSide ?
+        return type == ModBlockEntities.hardened_case.get() && !level.isClientSide ?
                 (level1, pos, state1, blockEntity) -> MetalCaseBlockEntity.tick(level1, pos, state1, (MetalCaseBlockEntity) blockEntity) :
                 null;
     }

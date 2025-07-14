@@ -3,7 +3,7 @@ package com.smeltingmetal.blockentity;
 import com.smeltingmetal.ModBlockEntities;
 import com.smeltingmetal.ModBlocks;
 import com.smeltingmetal.ModItems;
-import com.smeltingmetal.blocks.MetalCaseBlock;
+import com.smeltingmetal.blocks.HardenedCaseBlock;
 import com.smeltingmetal.items.MoltenMetalBucketItem;
 import com.smeltingmetal.items.MoltenMetalItem;
 import net.minecraft.core.BlockPos;
@@ -58,8 +58,8 @@ public class MetalCaseBlockEntity extends BlockEntity {
             if (!level.isClientSide) {
                 int fill = getFill();
                 BlockState st = level.getBlockState(worldPosition);
-                if (st.hasProperty(MetalCaseBlock.FILL)) {
-                    level.setBlock(worldPosition, st.setValue(MetalCaseBlock.FILL, fill), 3);
+                if (st.hasProperty(HardenedCaseBlock.FILL)) {
+                    level.setBlock(worldPosition, st.setValue(HardenedCaseBlock.FILL, fill), 3);
                 }
             }
         }
@@ -70,7 +70,7 @@ public class MetalCaseBlockEntity extends BlockEntity {
     private String metalType; // null until first insertion
 
     public MetalCaseBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.METAL_CASE.get(), pos, state);
+        super(ModBlockEntities.hardened_case.get(), pos, state);
     }
 
     /* ------------- Public helpers --------------- */
@@ -144,7 +144,7 @@ public class MetalCaseBlockEntity extends BlockEntity {
 
         // Drop empty case if needed
         if (returnsCase) {
-            ItemStack emptyCase = new ItemStack(this.getBlockState().getBlock() == ModBlocks.NETHERITE_METAL_CASE.get() ? ModItems.NETHERITE_METAL_CASE.get() : ModItems.METAL_CASE.get());
+            ItemStack emptyCase = new ItemStack(this.getBlockState().getBlock() == ModBlocks.NETHERITE_CASE.get() ? ModItems.NETHERITE_CASE.get() : ModItems.HARDENED_CASE.get());
             ItemEntity e = new ItemEntity(level1, worldPosition.getX()+0.5, worldPosition.getY()+1, worldPosition.getZ()+0.5, emptyCase);
             level1.addFreshEntity(e);
         }
@@ -172,8 +172,8 @@ public class MetalCaseBlockEntity extends BlockEntity {
         if (lvl == null) return;
         lvl.setBlock(worldPosition, outBlock.defaultBlockState(), 3);
         if (returnsCase) {
-            ItemStack empty = new ItemStack(this.getBlockState().getBlock() == ModBlocks.NETHERITE_METAL_CASE.get() ?
-                    ModItems.NETHERITE_METAL_CASE.get() : ModItems.METAL_CASE.get());
+            ItemStack empty = new ItemStack(this.getBlockState().getBlock() == ModBlocks.NETHERITE_CASE.get() ?
+                    ModItems.NETHERITE_CASE.get() : ModItems.HARDENED_CASE.get());
             ItemEntity e = new ItemEntity(lvl, worldPosition.getX()+0.5, worldPosition.getY()+1.0, worldPosition.getZ()+0.5, empty);
             lvl.addFreshEntity(e);
         }
@@ -201,7 +201,7 @@ public class MetalCaseBlockEntity extends BlockEntity {
             }
         }
         // Cooling check
-        be.tryCooling(be.getBlockState().getBlock() == ModBlocks.NETHERITE_METAL_CASE.get());
+        be.tryCooling(be.getBlockState().getBlock() == ModBlocks.NETHERITE_CASE.get());
     }
 
     /* ------------- Capability / NBT -------------- */

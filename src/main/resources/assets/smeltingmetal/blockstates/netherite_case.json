@@ -1,6 +1,6 @@
 {
   "variants": {
-    "fill=0": { "model": "smeltingmetal:block/netherite_metal_case" },
-    "fill=1": { "model": "smeltingmetal:block/netherite_metal_case_full" }
+    "fill=0": { "model": "smeltingmetal:block/netherite_case" },
+    "fill=1": { "model": "smeltingmetal:block/netherite_case_full" }
   }
 }

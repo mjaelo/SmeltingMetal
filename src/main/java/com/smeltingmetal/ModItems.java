@@ -23,6 +23,7 @@ public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, SmeltingMetalMod.MODID);
 
+    // Molten Metal Item
     public static final RegistryObject<Item> CLAY_MOLD = ITEMS.register("clay_mold",
             () -> new Item(new Item.Properties()));
 
@@ -32,25 +33,24 @@ public class ModItems {
     public static final RegistryObject<Item> NETHERITE_MOLD = ITEMS.register("netherite_mold",
             () -> new Item(new Item.Properties()));
 
-    // Generic Molten Metal Item
     public static final RegistryObject<Item> MOLTEN_METAL = ITEMS.register("molten_metal",
             () -> new MoltenMetalItem(new Item.Properties().stacksTo(1)));
 
-    // Filled mold items
     public static final RegistryObject<FilledMoldItem> FILLED_MOLD = ITEMS.register("filled_mold",
             () -> new FilledMoldItem(new Item.Properties()));
 
     public static final RegistryObject<FilledNetheriteMoldItem> FILLED_NETHERITE_MOLD = ITEMS.register("filled_netherite_mold",
             () -> new FilledNetheriteMoldItem(new Item.Properties()));
 
+    // Molten Metal Block
     public static final RegistryObject<Item> CLAY_CASE = ITEMS.register("clay_case",
             () -> new BlockItem(ModBlocks.CLAY_CASE.get(), new Item.Properties()));
 
-    public static final RegistryObject<Item> METAL_CASE = ITEMS.register("metal_case",
-            () -> new BlockItem(ModBlocks.METAL_CASE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> HARDENED_CASE = ITEMS.register("hardened_case",
+            () -> new BlockItem(ModBlocks.HARDENED_CASE.get(), new Item.Properties()));
 
-    public static final RegistryObject<Item> NETHERITE_METAL_CASE = ITEMS.register("netherite_metal_case",
-            () -> new BlockItem(ModBlocks.NETHERITE_METAL_CASE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> NETHERITE_CASE = ITEMS.register("netherite_case",
+            () -> new BlockItem(ModBlocks.NETHERITE_CASE.get(), new Item.Properties()));
 
     public static final RegistryObject<Item> MOLTEN_METAL_BLOCK = ITEMS.register("molten_metal_block",
                 () -> new MoltenMetalBlockItem(new Item.Properties().stacksTo(1)));

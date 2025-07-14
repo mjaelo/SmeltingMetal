@@ -3,11 +3,14 @@
   "pattern": [
     "   ",
     "C C",
-    "CCC"
+    "GGG"
   ],
   "key": {
     "C": {
       "item": "minecraft:netherite_scrap"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
     }
   },
   "result": {

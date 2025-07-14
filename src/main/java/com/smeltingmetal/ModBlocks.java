@@ -1,6 +1,6 @@
 package com.smeltingmetal;
 
-import com.smeltingmetal.blocks.MetalCaseBlock;
+import com.smeltingmetal.blocks.HardenedCaseBlock;
 import com.smeltingmetal.blocks.NetheriteCaseBlock;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.block.Block;
@@ -33,14 +33,14 @@ public class ModBlocks {
                     .dropsLike(Blocks.CLAY)
                     ));
 
-    public static final RegistryObject<Block> METAL_CASE = BLOCKS.register("metal_case",
-            () -> new MetalCaseBlock(BlockBehaviour.Properties.copy(Blocks.DIRT)
+    public static final RegistryObject<Block> HARDENED_CASE = BLOCKS.register("hardened_case",
+            () -> new HardenedCaseBlock(BlockBehaviour.Properties.copy(Blocks.DIRT)
                     .strength(.5F, 1.0F)
                     .sound(SoundType.DECORATED_POT)
                     .noOcclusion()
                     ));
 
-    public static final RegistryObject<Block> NETHERITE_METAL_CASE = BLOCKS.register("netherite_metal_case",
+    public static final RegistryObject<Block> NETHERITE_CASE = BLOCKS.register("netherite_case",
             () -> new NetheriteCaseBlock(BlockBehaviour.Properties.copy(Blocks.NETHERITE_BLOCK)
                     .strength(1.0F, 2.0F)
                     .sound(SoundType.NETHERITE_BLOCK)
@@ -61,8 +61,8 @@ public class ModBlocks {
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
             event.accept(ModItems.CLAY_CASE.get());
-            event.accept(ModItems.METAL_CASE.get());
-            event.accept(ModItems.NETHERITE_METAL_CASE.get());
+            event.accept(ModItems.HARDENED_CASE.get());
+            event.accept(ModItems.NETHERITE_CASE.get());
         }
     }
 

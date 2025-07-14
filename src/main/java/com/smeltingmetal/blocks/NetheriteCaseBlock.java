@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Netherite variant of the metal case block that returns the empty case when broken.
  */
-public class NetheriteCaseBlock extends MetalCaseBlock {
+public class NetheriteCaseBlock extends HardenedCaseBlock {
 
     public NetheriteCaseBlock(Properties props) {
         super(props, true);

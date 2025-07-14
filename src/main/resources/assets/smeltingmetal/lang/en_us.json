@@ -5,11 +5,11 @@
   "item.smeltingmetal.molten_metal_of": "Molten %s",
   "item.smeltingmetal.filled_mold_of": "Filled %s Mold",
   "item.smeltingmetal.filled_netherite_mold_of": "Filled %s Netherite Mold",
-  "item.smeltingmetal.metal_case": "Metal Case",
-  "item.smeltingmetal.netherite_metal_case": "Netherite Metal Case",
+  "item.smeltingmetal.hardened_case": "Metal Case",
+  "item.smeltingmetal.netherite_case": "Netherite Case",
   "block.smeltingmetal.clay_case": "Clay Case",
-  "block.smeltingmetal.metal_case": "Metal Case",
-  "block.smeltingmetal.netherite_metal_case": "Netherite Metal Case",
+  "block.smeltingmetal.hardened_case": "Hardened Case",
+  "block.smeltingmetal.netherite_case": "Netherite Metal Case",
   "item.smeltingmetal.molten_metal_block": "Block of Molten Metal",
   "item.smeltingmetal.molten_metal_bucket": "Molten Metal Bucket",
 
@@ -18,7 +18,7 @@
   "tooltip.smeltingmetal.unknown_metal": "Unknown Metal Type!",
   "tooltip.smeltingmetal.cool_with_water": "After filling with Molten Metal, Right-click with water bucket to cool.",
   "tooltip.smeltingmetal.cool_in_water": "Right-click on water to cool.",
-  "tooltip.smeltingmetal.bucket_use": "Right click on Metal Case to fill with Molten Metal.",
+  "tooltip.smeltingmetal.bucket_use": "Right click on Hardened or Netherite Case to fill with Molten Metal.",
   "tooltip.smeltingmetal.make_molten_metal_bucket": "This metal is so hot, you can only collect it with Bucket in inventory. Cool it down back into Block of Raw Ore with water or time.",
   "tooltip.smeltingmetal.make_filled_mold": "This metal is so hot, you can only collect it with Hardened or Netherite Mold in inventory. Cool it down back into Raw Ore with water or time."
 }
