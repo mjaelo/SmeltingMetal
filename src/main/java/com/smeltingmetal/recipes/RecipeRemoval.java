@@ -650,11 +650,10 @@ public class RecipeRemoval {
             String metalId = ModMetals.getMetalId(rid);
             if (metalId == null) {
                 // For vanilla blocks like iron_block the item id path ends with _block; derive metal
-                String p = rid.getPath();
-                if (p.endsWith("_block")) {
-                    String candidate = p.substring(0, p.length() - 6);
-                    if (ModMetals.doesMetalExist(candidate)) metalId = candidate;
-                }
+                String path = rid.getPath();
+                if (!path.startsWith("raw_") || !path.endsWith("_block")) continue;
+                String candidate = path.substring(0, path.length() - 6);
+                if (ModMetals.doesMetalExist(candidate)) metalId = candidate;
             }
             if (metalId == null) continue;
             boolean allIngots = shaped.getIngredients().stream().allMatch(ing -> {
