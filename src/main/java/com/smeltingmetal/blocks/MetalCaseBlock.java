@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Generic implementation shared by both MetalCase and NetheriteCase blocks.
+ * Generic implementation shared by both MetalCase and NetheriteCase blocks. TODO rename to clay case?
  */
 public class MetalCaseBlock extends Block implements EntityBlock {
 

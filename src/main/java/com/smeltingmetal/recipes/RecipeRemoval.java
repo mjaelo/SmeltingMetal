@@ -46,17 +46,33 @@ public class RecipeRemoval {
      * Replaces vanilla smelting recipes with custom molten metal recipes.
      * Processes all cooking recipes and modifies them to output molten metals.
      */
-    public static void replaceRecipes() {
+    public static void replaceRecipes(boolean isReload) {
+        LOGGER.info("===== STARTING RECIPE REPLACEMENT =====");
+
         RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
-        if (recipeManager == null) return;
+        if (recipeManager == null) {
+            if (!isReload) {
+                LOGGER.warn("RecipeManager is not available, skipping recipe replacement");
+            }
+            return;
+        }
+
         MinecraftServer server = SmeltingMetalMod.getServer();
-        if (server == null) return;
+        if (server == null) {
+            LOGGER.warn("MinecraftServer is not available, skipping recipe replacement");
+            return;
+        }
 
         RegistryAccess registryAccess = server.registryAccess();
         Set<RecipeType<?>> recipeTypesToReplace = getTargetRecipeTypes();
-        if (recipeTypesToReplace.isEmpty()) return;
+        if (recipeTypesToReplace.isEmpty()) {
+            LOGGER.warn("No recipe types to replace, check configuration");
+            return;
+        }
 
-        LOGGER.info("Starting recipe replacement for types: {}", recipeTypesToReplace);
+        LOGGER.info("Processing recipe replacement for types: {}", recipeTypesToReplace);
+        int totalRecipesProcessed = 0;
+        int totalRecipesReplaced = 0;
         try {
             Field recipesField = getRecipesField();
             recipesField.setAccessible(true);
@@ -65,11 +81,29 @@ public class RecipeRemoval {
             // remove block crafting recipes first
             removeBlockCraftingRecipes(recipesByType);
 
-            for (Recipe<?> recipe : recipeManager.getRecipes()) {
-                if (!recipeTypesToReplace.contains(recipe.getType())) continue;
+            List<Recipe<?>> allRecipes = new ArrayList<>(recipeManager.getRecipes());
+            LOGGER.info("Found {} total recipes to process", allRecipes.size());
 
-                if (recipe.getResultItem(registryAccess).isEmpty()) continue;
+            for (Recipe<?> recipe : allRecipes) {
+                totalRecipesProcessed++;
+
+                if (!recipeTypesToReplace.contains(recipe.getType())) {
+                    LOGGER.trace("Skipping recipe {} - wrong type: {}", recipe.getId(), recipe.getType());
+                    continue;
+                }
+
+                if (recipe.getResultItem(registryAccess).isEmpty()) {
+                    LOGGER.debug("Skipping recipe {} - empty result", recipe.getId());
+                    continue;
+                }
+
                 ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(recipe.getResultItem(registryAccess).getItem());
+                if (resultId == null) {
+                    LOGGER.warn("Skipping recipe {} - could not get item key for result", recipe.getId());
+                    continue;
+                }
+
+                LOGGER.debug("Processing recipe {} with result {}", recipe.getId(), resultId);
                 ResourceLocation finalMoltenIngotId = null;
 
                 // 1) classic detection: ingot/nugget outputs
@@ -127,38 +161,76 @@ public class RecipeRemoval {
 
                 if (finalMoltenIngotId != null) {
                     // Ensure ingredient isn't a block (nugget allowed)
-                    if (recipeInputBlacklisted(recipe)) continue;
+                    if (recipeInputBlacklisted(recipe)) {
+                        LOGGER.debug("Skipping recipe {} - input is blacklisted", recipe.getId());
+                        continue;
+                    }
+
+                    LOGGER.debug("Creating molten metal recipe for {} with metal ID: {}", recipe.getId(), finalMoltenIngotId);
                     Recipe<?> newRecipe = createMoltenMetalRecipe(recipe, finalMoltenIngotId, registryAccess);
                     if (newRecipe != null) {
-                        ORIGINAL_RECIPES.put(recipe.getId(), recipe);
-                        REPLACED_RECIPES.add(recipe.getId());
-                        replaceRecipeInManager(recipeManager, recipe.getId(), newRecipe);
-                        LOGGER.debug("Replaced recipe {} with molten metal variant for {}", recipe.getId(), finalMoltenIngotId);
+                        LOGGER.debug("Successfully created replacement recipe for {}", recipe.getId());
+                        try {
+                            ORIGINAL_RECIPES.put(recipe.getId(), recipe);
+                            REPLACED_RECIPES.add(recipe.getId());
+                            boolean replaced = replaceRecipeInManager(recipeManager, recipe.getId(), newRecipe);
+                            if (replaced) {
+                                LOGGER.info("SUCCESSFULLY REPLACED recipe {} -> {} (original: {})",
+                                        recipe.getId(),
+                                        ForgeRegistries.ITEMS.getKey(newRecipe.getResultItem(registryAccess).getItem()),
+                                        resultId);
+                            } else {
+                                LOGGER.error("FAILED to replace recipe {} in manager. Original: {}", recipe.getId(), resultId);
+                            }
+                            totalRecipesReplaced++;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to replace recipe {}: {}", recipe.getId(), e.getMessage(), e);
+                        }
+                    } else {
+                        LOGGER.warn("Failed to create replacement recipe for {}", recipe.getId());
                     }
+                } else {
+                    LOGGER.trace("Skipping recipe {} - no molten metal match found", recipe.getId());
                 }
             }
-            LOGGER.info("Finished recipe replacement. Replaced {} recipes.", REPLACED_RECIPES.size());
+            LOGGER.info("===== RECIPE REPLACEMENT SUMMARY =====");
+            LOGGER.info("Total recipes processed: {}", totalRecipesProcessed);
+            LOGGER.info("Total recipes replaced: {}", totalRecipesReplaced);
+            LOGGER.info("Total recipes in REPLACED_RECIPES: {}", REPLACED_RECIPES.size());
+            LOGGER.info("Total recipes in ORIGINAL_RECIPES: {}", ORIGINAL_RECIPES.size());
+            LOGGER.info("======================================");
+
             addMissingMetalItemRecipes(recipeManager, registryAccess, recipeTypesToReplace);
             replaceNuggetCraftingRecipes(recipeManager, registryAccess);
             addRawBlockMoltenRecipes(recipeManager, registryAccess);
+
+            LOGGER.info("===== RECIPE REPLACEMENT COMPLETE =====");
         } catch (Exception e) {
-            LOGGER.error("Failed to access recipe manager fields via reflection", e);
+            LOGGER.error("CRITICAL ERROR during recipe replacement: {}", e.getMessage(), e);
+            LOGGER.error("Recipes replaced before error: {}", REPLACED_RECIPES.size());
         }
     }
 
     /**
      * Creates a new cooking recipe that outputs a molten metal item.
-     * @param originalRecipe The original recipe to base the new one on
+     *
+     * @param originalRecipe  The original recipe to base the new one on
      * @param originalIngotId The ID of the original ingot being replaced
-     * @param registryAccess Registry access for recipe operations
+     * @param registryAccess  Registry access for recipe operations
      * @return A new recipe that outputs molten metal, or null if invalid
      */
     private static Recipe<?> createMoltenMetalRecipe(Recipe<?> originalRecipe, ResourceLocation originalIngotId, RegistryAccess registryAccess) {
         String metalId = ModMetals.getMetalId(originalIngotId);
-        if (metalId == null) return null;
+        if (metalId == null) {
+            LOGGER.warn("Could not determine metal ID for item: {}", originalIngotId);
+            return null;
+        }
 
         ItemStack resultStack = ModItems.getMoltenMetalStack(metalId);
-        if (resultStack.isEmpty()) return null;
+        if (resultStack.isEmpty()) {
+            LOGGER.warn("Failed to create molten metal stack for metal ID: {}", metalId);
+            return null;
+        }
 
         if (originalRecipe instanceof AbstractCookingRecipe originalCookingRecipe) {
             Ingredient ingredient = originalCookingRecipe.getIngredients().get(0);
@@ -184,8 +256,9 @@ public class RecipeRemoval {
     /**
      * Creates a new cooking recipe with a different output item.
      * Preserves all other properties from the original recipe.
+     *
      * @param originalRecipe The recipe to copy properties from
-     * @param newResult The new output item stack
+     * @param newResult      The new output item stack
      * @return A new recipe with the updated output, or null if type is unsupported
      */
     private static Recipe<?> replaceCookingResult(Recipe<?> originalRecipe, ItemStack newResult) {
@@ -214,8 +287,17 @@ public class RecipeRemoval {
      * @param recipeId The ID of the recipe to replace
      * @param newRecipe The new recipe to insert
      */
-    private static void replaceRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
+    /**
+     * Replaces a recipe in the recipe manager.
+     *
+     * @param recipeManager The recipe manager to modify
+     * @param recipeId      The ID of the recipe to replace
+     * @param newRecipe     The new recipe to insert
+     * @return true if replacement was successful, false otherwise
+     */
+    private static boolean replaceRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
         try {
+            LOGGER.debug("Attempting to replace recipe: {}", recipeId);
             Field recipesField = getRecipesField();
             recipesField.setAccessible(true);
             Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType = (Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>>) recipesField.get(recipeManager);
@@ -232,13 +314,20 @@ public class RecipeRemoval {
             Map<ResourceLocation, Recipe<?>> newByName = new HashMap<>(byName);
             newByName.put(recipeId, newRecipe);
             byNameField.set(recipeManager, Collections.unmodifiableMap(newByName));
+            LOGGER.debug("Successfully replaced recipe in manager: {}", recipeId);
+            return true;
         } catch (Exception e) {
-            LOGGER.error("Failed to update recipe manager for recipe: " + recipeId, e);
+            LOGGER.error("Failed to update recipe manager for recipe: {}", recipeId, e);
+            LOGGER.error("Error details - Recipe type: {}, Result item: {}",
+                    newRecipe.getType(),
+                    newRecipe.getResultItem(SmeltingMetalMod.getServer().registryAccess()).getItem());
+            return false;
         }
     }
 
     /**
      * Gets the private recipes field from RecipeManager using reflection.
+     *
      * @return The accessible recipes field
      * @throws NoSuchFieldException If the field cannot be found
      */
@@ -285,6 +374,7 @@ public class RecipeRemoval {
 
     /**
      * Gets the set of recipe types that should be processed for replacement.
+     *
      * @return Set of recipe types to process (smelting, blasting, etc.)
      */
     private static Set<RecipeType<?>> getTargetRecipeTypes() {
@@ -341,6 +431,7 @@ public class RecipeRemoval {
 
     /**
      * Derives an ingot ID from a result ID.
+     *
      * @param resultId The result item ID to process
      * @return The corresponding ingot ID, or null if not applicable
      */
@@ -357,6 +448,7 @@ public class RecipeRemoval {
 
     /**
      * Detects metal type from a result item's name.
+     *
      * @param resultId The result item ID to analyze
      * @return The metal key if detected, null otherwise
      */
@@ -367,7 +459,7 @@ public class RecipeRemoval {
             if (path.contains(bad)) return null;
         }
         for (String metalKey : ModMetals.getAllMetalProperties().keySet()) {
-            String keyName = metalKey.contains(":") ? metalKey.split(":",2)[1] : metalKey;
+            String keyName = metalKey.contains(":") ? metalKey.split(":", 2)[1] : metalKey;
             if (path.contains(keyName.toLowerCase())) return metalKey;
         }
         return null;
@@ -375,19 +467,29 @@ public class RecipeRemoval {
 
     /**
      * Checks if a recipe's input items match any blacklisted keywords.
+     *
      * @param recipe The recipe to check
      * @return true if any input is blacklisted, false otherwise
      */
     private static boolean recipeInputBlacklisted(Recipe<?> recipe) {
-        if (!(recipe instanceof AbstractCookingRecipe cooking)) return false;
-        if (cooking.getIngredients().isEmpty()) return false;
+        if (!(recipe instanceof AbstractCookingRecipe cooking)) {
+            LOGGER.trace("Recipe {} is not a cooking recipe, not blacklisted", recipe.getId());
+            return false;
+        }
+        if (cooking.getIngredients().isEmpty()) {
+            LOGGER.debug("Recipe {} has no ingredients, not blacklisted", recipe.getId());
+            return false;
+        }
         Ingredient ing = cooking.getIngredients().get(0);
         for (ItemStack st : ing.getItems()) {
             ResourceLocation rid = ForgeRegistries.ITEMS.getKey(st.getItem());
             if (rid == null) continue;
             String p = rid.getPath().toLowerCase();
             for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
-                if (p.contains(bad)) return true;
+                if (p.contains(bad)) {
+                    LOGGER.debug("Recipe {} is blacklisted due to keyword '{}' in path: {}", recipe.getId(), bad, p);
+                    return true;
+                }
             }
         }
         return false;
@@ -395,9 +497,10 @@ public class RecipeRemoval {
 
     /**
      * Adds missing molten metal recipes for metal items that don't have them.
-     * @param recipeManager The recipe manager to add recipes to
+     *
+     * @param recipeManager  The recipe manager to add recipes to
      * @param registryAccess Registry access for recipe operations
-     * @param targetTypes The recipe types to create recipes for
+     * @param targetTypes    The recipe types to create recipes for
      */
     private static void addMissingMetalItemRecipes(RecipeManager recipeManager, RegistryAccess registryAccess, Set<RecipeType<?>> targetTypes) {
         for (Item item : ForgeRegistries.ITEMS) {
@@ -406,14 +509,20 @@ public class RecipeRemoval {
             String path = itemId.getPath().toLowerCase();
             boolean skip = false;
             for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
-                if (path.contains(bad)) { skip=true; break; }
+                if (path.contains(bad)) {
+                    skip = true;
+                    break;
+                }
             }
             if (skip || path.contains("ingot") || path.contains("raw_")) continue;
 
             String matchedMetal = null;
             for (String metalKey : ModMetals.getAllMetalProperties().keySet()) {
-                String keyName = metalKey.contains(":") ? metalKey.split(":",2)[1] : metalKey;
-                if (path.contains(keyName.toLowerCase())) { matchedMetal = metalKey; break; }
+                String keyName = metalKey.contains(":") ? metalKey.split(":", 2)[1] : metalKey;
+                if (path.contains(keyName.toLowerCase())) {
+                    matchedMetal = metalKey;
+                    break;
+                }
             }
             if (matchedMetal == null) continue;
 
@@ -452,65 +561,78 @@ public class RecipeRemoval {
     /**
      * Adds recipes for smelting raw metal blocks into molten metal blocks.
      * Handles both vanilla-style raw items and direct raw blocks.
-     * @param recipeManager The recipe manager to add recipes to
+     *
+     * @param recipeManager  The recipe manager to add recipes to
      * @param registryAccess Registry access for recipe operations
      */
     private static void addRawBlockMoltenRecipes(RecipeManager recipeManager, RegistryAccess registryAccess) {
-        for (Recipe<?> recipe : recipeManager.getRecipes()) {
-            if (!(recipe instanceof AbstractCookingRecipe acr)) continue;
-            // look for raw_<metal> item recipe
-            Ingredient ing = acr.getIngredients().get(0);
-            ItemStack[] stacks = ing.getItems();
-            if (stacks.length == 0) continue;
-            ResourceLocation firstId = ForgeRegistries.ITEMS.getKey(stacks[0].getItem());
-            if (firstId == null) continue;
-            if (!firstId.getPath().startsWith("raw_") || firstId.getPath().endsWith("_block")) continue;
+        LOGGER.info("===== ADDING RAW BLOCK MOLTEN RECIPES =====");
+        int addedRecipes = 0;
 
-            String base = firstId.getPath().substring(4); // strip raw_
-            String metalKey = firstId.getNamespace() + ":" + base;
+        // First, find all raw metal blocks and create recipes for them
+        for (Item item : ForgeRegistries.ITEMS) {
+            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(item);
+            if (itemId == null) continue;
 
-            // derive raw block id
-            ResourceLocation rawBlockId = new ResourceLocation(firstId.getNamespace(), "raw_" + base + "_block");
-            if (!ForgeRegistries.ITEMS.containsKey(rawBlockId)) continue;
+            String path = itemId.getPath();
+            if (!path.startsWith("raw_") || !path.endsWith("_block")) continue;
 
-            // if recipe already exists for raw block skip
-            Item rawBlockItem = ForgeRegistries.ITEMS.getValue(rawBlockId);
-            boolean exists = false;
-            for (Recipe<?> r : recipeManager.getRecipes()) {
-                if (r instanceof AbstractCookingRecipe c && !c.getIngredients().isEmpty() && c.getIngredients().get(0).test(new ItemStack(rawBlockItem))) {
-                    exists = true;
-                    break;
-                }
-            }
-            if (exists) continue;
+            // Extract metal name (e.g., "iron" from "raw_iron_block")
+            String metalKey = path.substring(4, path.length() - 6); // strip "raw_" and "_block"
+            LOGGER.debug("Found raw metal block: {} for metal: {}", itemId, metalKey);
 
-            // Build new recipe mirroring the original type/time/xp *9
-            int time = acr.getCookingTime() * 2; // raw block cooks slower but not x9
-            float xp = acr.getExperience() * 2f;
-            CookingBookCategory cat = acr.category();
-            String group = acr.getGroup();
-            Ingredient newIng = Ingredient.of(rawBlockItem);
-            ItemStack result = ModItems.getMoltenMetalBlockStack(metalKey);
-
-            ResourceLocation newId = new ResourceLocation(SmeltingMetalMod.MODID,
-                    "smelt_raw_block_" + metalKey.replace(':', '_'));
-
-            Recipe<?> newRecipe;
-            if (recipe.getType() == RecipeType.SMELTING) {
-                newRecipe = new SmeltingRecipe(newId, group, cat, newIng, result, xp, time);
-            } else if (recipe.getType() == RecipeType.BLASTING) {
-                newRecipe = new BlastingRecipe(newId, group, cat, newIng, result, xp, time);
-            } else {
-                continue; // skip unsupported cooking type
+            // Get the corresponding molten metal block
+            ItemStack moltenBlock = ModItems.getMoltenMetalBlockStack(itemId.getNamespace() + ":" + metalKey);
+            if (moltenBlock.isEmpty()) {
+                LOGGER.warn("No molten metal block found for metal: {}", metalKey);
+                continue;
             }
 
-            replaceRecipeInManager(recipeManager, newId, newRecipe);
-            LOGGER.debug("Added new raw block -> molten block recipe {}", newId);
+            // Create both smelting and blasting recipes
+            createAndAddRawBlockRecipe(recipeManager, item, moltenBlock, "smelting", 200, 0.7f, addedRecipes);
+            createAndAddRawBlockRecipe(recipeManager, item, moltenBlock, "blasting", 100, 0.7f, addedRecipes);
+
+            addedRecipes += 2;
+        }
+
+        LOGGER.info("Added {} raw block molten recipes", addedRecipes);
+        LOGGER.info("======================================");
+    }
+
+    private static void createAndAddRawBlockRecipe(RecipeManager recipeManager, Item input, ItemStack output,
+                                                   String type, int baseTime, float xp, int index) {
+        String metalKey = ForgeRegistries.ITEMS.getKey(input).getPath()
+                .replace("raw_", "")
+                .replace("_block", "");
+
+        ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID,
+                String.format("%s_raw_%s_block_%d", type, metalKey, index));
+
+        Ingredient ingredient = Ingredient.of(input);
+
+        Recipe<?> recipe;
+        if ("smelting".equals(type)) {
+            recipe = new SmeltingRecipe(recipeId, "", CookingBookCategory.MISC,
+                    ingredient, output, xp, baseTime);
+        } else {
+            recipe = new BlastingRecipe(recipeId, "", CookingBookCategory.MISC,
+                    ingredient, output, xp, baseTime / 2);
+        }
+
+        boolean success = replaceRecipeInManager(recipeManager, recipeId, recipe);
+        if (success) {
+            LOGGER.info("Added {} recipe for {} -> {}", type,
+                    ForgeRegistries.ITEMS.getKey(input),
+                    ForgeRegistries.ITEMS.getKey(output.getItem()));
+        } else {
+            LOGGER.warn("Failed to add {} recipe for {}", type,
+                    ForgeRegistries.ITEMS.getKey(input));
         }
     }
 
     /**
      * Removes vanilla block crafting recipes to prevent duplication with smelting.
+     *
      * @param recipesByType Map of recipe types to their recipes
      */
     private static void removeBlockCraftingRecipes(Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipesByType) {
@@ -530,14 +652,14 @@ public class RecipeRemoval {
                 // For vanilla blocks like iron_block the item id path ends with _block; derive metal
                 String p = rid.getPath();
                 if (p.endsWith("_block")) {
-                    String candidate = p.substring(0, p.length()-6);
+                    String candidate = p.substring(0, p.length() - 6);
                     if (ModMetals.doesMetalExist(candidate)) metalId = candidate;
                 }
             }
             if (metalId == null) continue;
             boolean allIngots = shaped.getIngredients().stream().allMatch(ing -> {
                 if (ing.isEmpty()) return false;
-                ItemStack any = ing.getItems().length>0 ? ing.getItems()[0] : ItemStack.EMPTY;
+                ItemStack any = ing.getItems().length > 0 ? ing.getItems()[0] : ItemStack.EMPTY;
                 ResourceLocation iid = ForgeRegistries.ITEMS.getKey(any.getItem());
                 return iid != null && iid.getPath().endsWith("ingot");
             });
@@ -550,6 +672,7 @@ public class RecipeRemoval {
 
     /**
      * Handles server start event to initialize recipe replacement.
+     *
      * @param event The server started event
      */
     @SubscribeEvent
@@ -559,16 +682,17 @@ public class RecipeRemoval {
         SmeltingMetalMod.setServer(event.getServer());
 
         LOGGER.info("Server started, triggering initial recipe replacement.");
-        replaceRecipes();
+        replaceRecipes(false);
     }
 
     /**
      * Handles recipe reload events to ensure proper recipe replacement.
+     *
      * @param event The reload event
      */
     @SubscribeEvent
     public static void onReload(AddReloadListenerEvent event) {
         restoreRecipes();
-        replaceRecipes();
+        replaceRecipes(true);
     }
 }

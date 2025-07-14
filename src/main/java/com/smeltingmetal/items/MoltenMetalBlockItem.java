@@ -93,9 +93,11 @@ public class MoltenMetalBlockItem extends CoolingItem {
 //        if (entity.getAge() > 600) {
 //            String metalId = getMetalId(stack);
 //            if (metalId != null) {
-//                String[] split = metalId.split(":");
-//                if (split.length == 2) {
-//                    ResourceLocation rawBlockId = new ResourceLocation(split[0], "raw_" + split[1] + "_block");
+//                ResourceLocation metalLoc = ResourceLocation.tryParse(metalId);
+//                if (metalLoc != null) {
+//                    String namespace = metalLoc.getNamespace();
+//                    String path = metalLoc.getPath();
+//                    ResourceLocation rawBlockId = new ResourceLocation(namespace, "raw_" + path + "_block");
 //                    Item rawBlock = ForgeRegistries.ITEMS.getValue(rawBlockId);
 //                    if (rawBlock != null && rawBlock != Items.AIR) {
 //                        entity.setItem(new ItemStack(rawBlock, stack.getCount()));
