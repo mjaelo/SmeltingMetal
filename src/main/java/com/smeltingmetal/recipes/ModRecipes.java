@@ -1,20 +1,18 @@
 package com.smeltingmetal.recipes;
 
-import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
+/**
+ * Handles the registration of all custom recipe serializers for the Smelting Metal mod.
+ * This class is responsible for registering the serializers that define how custom recipes
+ * are saved to and loaded from JSON files.
+ */
 public class ModRecipes {
-    // DeferredRegister for RecipeSerializers
-    public static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS =
-            DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, SmeltingMetalMod.MODID);
-
-    // Register our custom serializer
-    public static final RegistryObject<RecipeSerializer<MoltenMetalSmeltingRecipe>> MOLTEN_METAL_SMELTING =
-            SERIALIZERS.register("molten_metal_smelting", () -> MoltenMetalSmeltingSerializer.INSTANCE);
+    private static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS =
+            DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, "smeltingmetal");
 
     public static void register(IEventBus eventBus) {
         SERIALIZERS.register(eventBus);

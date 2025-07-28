@@ -1,6 +1,6 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalIngot;
 
-import com.smeltingmetal.ModItems;
+import com.smeltingmetal.items.ModItems;
 import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -10,6 +10,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+/**
+ * Represents a hardened mold filled with molten metal that can be cooled to create an ingot.
+ * This mold breaks after a single use. The metal type is stored in the item's NBT data.
+ */
 public class FilledMoldItem extends AbstractFilledMoldItem {
     public FilledMoldItem(Properties pProperties) {
         super(pProperties);
@@ -42,6 +46,7 @@ public class FilledMoldItem extends AbstractFilledMoldItem {
         super.appendHoverText(pStack, pLevel, pTooltipComponents, pIsAdvanced);
         String metalType = getMetalType(pStack);
         if (!"unknown".equals(metalType)) {
+            // TODO add translation
             String idPath = metalType.contains(":") ? metalType.split(":")[1] : metalType;
             pTooltipComponents.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".cool_in_water"));
         } else {

@@ -1,4 +1,4 @@
-package com.smeltingmetal.blocks;
+package com.smeltingmetal.blocks.blocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -17,7 +17,7 @@ import java.util.List;
 public class NetheriteCaseBlock extends HardenedCaseBlock {
 
     public NetheriteCaseBlock(Properties props) {
-        super(props, true);
+        super(props);
     }
 
     @Override

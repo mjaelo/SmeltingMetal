@@ -1,14 +1,13 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalBlock;
 
-import com.smeltingmetal.ModItems;
-import com.smeltingmetal.ModMetals;
 import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.data.ModMetals;
+import com.smeltingmetal.items.CoolingItem;
+import com.smeltingmetal.items.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -47,7 +46,7 @@ public class MoltenMetalBlockItem extends CoolingItem {
         if (metalId != null) {
             String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
             String formatted = idPath.substring(0, 1).toUpperCase() + idPath.substring(1);
-            return Component.literal("Molten " + formatted + " Block");
+            return Component.translatable("item." + SmeltingMetalMod.MODID + ".molten_metal_block", formatted);
         }
         return super.getName(stack);
     }
@@ -81,31 +80,4 @@ public class MoltenMetalBlockItem extends CoolingItem {
         return null;
     }
 
-    @Override
-    protected void onCooled(ItemStack originalStack, ItemStack cooledStack, Level level, BlockPos pos) {
-        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.0F);
-    }
-
-//    @Override
-//    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-//        if (entity.level().isClientSide) return false;
-//        // After 30 seconds (600 ticks) transform back into raw block
-//        if (entity.getAge() > 600) {
-//            String metalId = getMetalId(stack);
-//            if (metalId != null) {
-//                ResourceLocation metalLoc = ResourceLocation.tryParse(metalId);
-//                if (metalLoc != null) {
-//                    String namespace = metalLoc.getNamespace();
-//                    String path = metalLoc.getPath();
-//                    ResourceLocation rawBlockId = new ResourceLocation(namespace, "raw_" + path + "_block");
-//                    Item rawBlock = ForgeRegistries.ITEMS.getValue(rawBlockId);
-//                    if (rawBlock != null && rawBlock != Items.AIR) {
-//                        entity.setItem(new ItemStack(rawBlock, stack.getCount()));
-//                        entity.setPickUpDelay(10);
-//                    }
-//                }
-//            }
-//        }
-//        return false;
-//    }
 }

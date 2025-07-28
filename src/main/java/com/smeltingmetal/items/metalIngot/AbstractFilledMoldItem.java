@@ -1,11 +1,11 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalIngot;
 
-import com.smeltingmetal.ModMetals;
+import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.data.ModMetals;
+import com.smeltingmetal.items.CoolingItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -13,7 +13,11 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 /**
- * Base class containing shared logic for filled mold items (hardened / netherite).
+ * Abstract base class for filled mold items that can cool into metal ingots.
+ * This class provides common functionality for both hardened and netherite mold variants.
+ * 
+ * <p>Filled molds store the metal type they contain in their NBT data and can be cooled
+ * to produce the corresponding metal ingot when exposed to water.</p>
  */
 public abstract class AbstractFilledMoldItem extends CoolingItem {
 
@@ -43,7 +47,7 @@ public abstract class AbstractFilledMoldItem extends CoolingItem {
         if ("unknown".equals(metal)) return null;
 
         ResourceLocation ingotId = ModMetals.getMetalProperties(metal)
-                .map(props -> props.ingotId())
+                .map(MetalProperties::ingotId)
                 .orElse(null);
                 
         if (ingotId == null) return null;
@@ -60,11 +64,6 @@ public abstract class AbstractFilledMoldItem extends CoolingItem {
         }
 
         return new ItemStack(ingotItem, stack.getCount());
-    }
-
-    @Override
-    protected void onCooled(ItemStack originalStack, ItemStack cooledStack, Level level, BlockPos pos) {
-        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.0F);
     }
 
     /**

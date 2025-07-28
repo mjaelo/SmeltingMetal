@@ -1,14 +1,15 @@
-package com.smeltingmetal.config;
+package com.smeltingmetal;
 
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
 
 import java.util.List;
 import java.util.function.Predicate;
 
-import static com.smeltingmetal.SmeltingMetalMod.MODID;
-
+/**
+ * Handles configuration for the Smelting Metal mod, including metal definitions,
+ * blacklist keywords, and feature toggles. This class manages the mod's runtime
+ * configuration using Forge's configuration system.
+ */
 public class MetalsConfig {
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static final Config CONFIG;
@@ -18,24 +19,26 @@ public class MetalsConfig {
         CONFIG = new Config(builder);
         CONFIG_SPEC = builder.build();
     }
-    
-    public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC, MODID + "-common.toml");
-    }
-    
+
+    /**
+     * Inner configuration class that holds all configurable values for the mod.
+     * These values are loaded from the mod's configuration file and can be
+     * modified by server admins or through the config GUI.
+     */
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
-        public final ForgeConfigSpec.ConfigValue<List<? extends String>> recipeTypes;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
+        public final ForgeConfigSpec.BooleanValue enableMetalMelting;
+        public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
         
         private static final Predicate<Object> METAL_DEFINITION_VALIDATOR = 
             obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+=[a-z0-9_.-]+:[a-z0-9_.-]+$");
         
-        private static final Predicate<Object> RECIPE_TYPE_VALIDATOR =
+        private static final Predicate<Object> KEYWORD_VALIDATOR =
             obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+$");
         
         public Config(ForgeConfigSpec.Builder builder) {
-            builder.comment("Metal and recipe configuration")
+            builder.comment("Metal processing configuration")
                   .push("metals");
             
             // Default metal definitions
@@ -53,26 +56,26 @@ public class MetalsConfig {
                     METAL_DEFINITION_VALIDATOR
                 );
             
-            // Default recipe types
-            List<String> defaultRecipeTypes = List.of(
-                "smelting",
-                "blasting"
-            );
-            
-            recipeTypes = builder
-                .comment("List of recipe types to generate (smelting, blasting, etc.)")
-                .defineList(
-                    "recipe_types",
-                    defaultRecipeTypes,
-                    RECIPE_TYPE_VALIDATOR
-                );
-            
             // Blacklisted substrings for ingredients / items (e.g., block, nugget)
             List<String> defaultBlacklist = List.of("block", "nugget");
             blacklistKeywords = builder
                 .comment("List of substrings; if an ingredient's registry path contains any of these, the recipe is skipped from molten replacement")
-                .defineList("blacklist_keywords", defaultBlacklist, RECIPE_TYPE_VALIDATOR);
+                .defineList("blacklist_keywords", defaultBlacklist, KEYWORD_VALIDATOR);
             
+            builder.pop();
+            
+            // Feature toggles
+            builder.comment("Feature toggles")
+                  .push("features");
+            
+            enableMetalMelting = builder
+                .comment("Enable replacement of smelting/blasting recipes with molten metal recipes")
+                .define("enable_metal_melting", true);
+                
+            enableNuggetRecipeReplacement = builder
+                .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")
+                .define("enable_nugget_recipe_replacement", true);
+                
             builder.pop();
         }
     }

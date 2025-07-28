@@ -1,23 +1,24 @@
-package com.smeltingmetal;
+package com.smeltingmetal.items;
 
-import com.smeltingmetal.items.FilledMoldItem;
-import com.smeltingmetal.items.FilledNetheriteMoldItem;
-import com.smeltingmetal.items.MoltenMetalItem;
-import com.smeltingmetal.items.MoltenMetalBlockItem;
-import com.smeltingmetal.items.MoltenMetalBucketItem;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.blocks.ModBlocks;
+import com.smeltingmetal.items.metalBlock.MoltenMetalBlockItem;
+import com.smeltingmetal.items.metalBlock.MoltenMetalBucketItem;
+import com.smeltingmetal.items.metalIngot.FilledMoldItem;
+import com.smeltingmetal.items.metalIngot.FilledNetheriteMoldItem;
+import com.smeltingmetal.items.metalIngot.MoltenMetalItem;
+import net.minecraft.world.item.*;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+/**
+ * Handles registration and management of all custom items in the Smelting Metal mod.
+ * This includes molds, molten metals, and other special items used in the metal smelting process.
+ */
 @Mod.EventBusSubscriber(modid = SmeltingMetalMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
@@ -57,10 +58,6 @@ public class ModItems {
 
     public static final RegistryObject<Item> MOLTEN_METAL_BUCKET = ITEMS.register("molten_metal_bucket",
             () -> new MoltenMetalBucketItem(new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1)));
-
-    public static void register(IEventBus eventBus) {
-        ITEMS.register(eventBus);
-    }
 
     @SubscribeEvent
     public static void addCreative(BuildCreativeModeTabContentsEvent event) {

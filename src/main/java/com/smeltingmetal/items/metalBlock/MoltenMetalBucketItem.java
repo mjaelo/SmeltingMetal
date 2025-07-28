@@ -1,6 +1,7 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalBlock;
 
 import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.items.ModItems;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -23,7 +24,7 @@ public class MoltenMetalBucketItem extends Item {
     }
 
     public static ItemStack createStack(String metalId) {
-        ItemStack stack = new ItemStack(com.smeltingmetal.ModItems.MOLTEN_METAL_BUCKET.get());
+        ItemStack stack = new ItemStack(ModItems.MOLTEN_METAL_BUCKET.get());
         CompoundTag tag = stack.getOrCreateTag();
         tag.putString(TAG_METAL_ID, metalId);
         return stack;
@@ -40,7 +41,9 @@ public class MoltenMetalBucketItem extends Item {
     public Component getName(ItemStack stack) {
         String metalId = getMetalId(stack);
         if (metalId != null) {
-            return Component.translatable("item." + SmeltingMetalMod.MODID + ".molten_metal_bucket", metalId);
+            String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
+            String formatted = idPath.substring(0, 1).toUpperCase() + idPath.substring(1);
+            return Component.translatable("item." + SmeltingMetalMod.MODID + ".molten_metal_bucket", formatted);
         }
         return super.getName(stack);
     }

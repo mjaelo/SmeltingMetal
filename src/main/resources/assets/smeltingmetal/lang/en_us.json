@@ -10,8 +10,8 @@
   "block.smeltingmetal.clay_case": "Clay Case",
   "block.smeltingmetal.hardened_case": "Hardened Case",
   "block.smeltingmetal.netherite_case": "Netherite Metal Case",
-  "item.smeltingmetal.molten_metal_block": "Block of Molten Metal",
-  "item.smeltingmetal.molten_metal_bucket": "Molten Metal Bucket",
+  "item.smeltingmetal.molten_metal_block": "Molten %s Block",
+  "item.smeltingmetal.molten_metal_bucket": "Molten %s Bucket",
 
   "metal.smeltingmetal.unknown": "Unknown Metal",
 

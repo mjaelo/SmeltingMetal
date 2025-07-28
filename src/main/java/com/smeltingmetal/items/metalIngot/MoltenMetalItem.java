@@ -1,8 +1,10 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalIngot;
 
-import com.smeltingmetal.ModItems;
-import com.smeltingmetal.ModMetals;
 import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.data.ModMetals;
+import com.smeltingmetal.items.CoolingItem;
+import com.smeltingmetal.items.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -11,13 +13,19 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * Represents an item containing molten metal that can cool into a solid form.
+ * This class handles the behavior of molten metal items, including their display name,
+ * tooltip information, and cooling mechanics.
+ *
+ * <p>Molten metal items store their metal type in NBT data and can cool into
+ * the corresponding metal ingot when exposed to water.</p>
+ */
 public class MoltenMetalItem extends CoolingItem {
     public static final String METAL_ID_KEY = "MetalID";
 
@@ -30,7 +38,7 @@ public class MoltenMetalItem extends CoolingItem {
         String metalId = getMetalId(pStack);
         if (metalId != null) {
             String idPath = metalId.contains(":") ? metalId.split(":")[1] : metalId;
-            String formattedName = idPath.substring(0,1).toUpperCase() + idPath.substring(1);
+            String formattedName = idPath.substring(0, 1).toUpperCase() + idPath.substring(1);
             return Component.literal("Molten " + formattedName);
         }
         return super.getName(pStack);
@@ -44,8 +52,6 @@ public class MoltenMetalItem extends CoolingItem {
             pTooltip.add(Component.translatable("tooltip." + SmeltingMetalMod.MODID + ".make_filled_mold"));
         }
     }
-
-    // fillItemCategory has been removed as it is handled by the BuildCreativeModeTabContentsEvent in ModItems
 
     public static ItemStack createStack(String metalId) {
         ItemStack stack = new ItemStack(ModItems.MOLTEN_METAL.get());
@@ -65,7 +71,7 @@ public class MoltenMetalItem extends CoolingItem {
         String metalId = getMetalId(stack);
         if (metalId != null) {
             return ModMetals.getMetalProperties(metalId)
-                    .map(props -> props.ingotId())
+                    .map(MetalProperties::ingotId)
                     .orElse(null);
         }
         return null;
@@ -84,7 +90,7 @@ public class MoltenMetalItem extends CoolingItem {
 
         // First try to get raw item
         Item rawItem = CoolingItem.getItem(new ResourceLocation(namespace, "raw_" + path));
-        
+
         // Fall back to ingot if raw item doesn't exist
         if (rawItem == null || rawItem == Items.AIR) {
             rawItem = CoolingItem.getItem(getIngotId(stack));
@@ -96,8 +102,4 @@ public class MoltenMetalItem extends CoolingItem {
         return null;
     }
 
-    @Override
-    protected void onCooled(ItemStack originalStack, ItemStack cooledStack, Level level, BlockPos pos) {
-        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 1.0F);
-    }
 }

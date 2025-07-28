@@ -1,7 +1,6 @@
-package com.smeltingmetal.blocks;
+package com.smeltingmetal.blocks.blocks;
 
-import com.smeltingmetal.ModBlockEntities;
-import com.smeltingmetal.blockentity.MetalCaseBlockEntity;
+import com.smeltingmetal.blocks.blockentity.MetalCaseBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -17,8 +16,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -31,7 +28,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Generic implementation shared by both MetalCase and NetheriteCase blocks.
+ * Represents a hardened case block used in the metal smelting process.
+ * This is the base class for both regular and netherite variants of the metal case.
+ * The case can be filled with molten metal and will convert to a solid metal block when cooled with water.
  */
 public class HardenedCaseBlock extends Block implements EntityBlock {
 
@@ -40,15 +39,8 @@ public class HardenedCaseBlock extends Block implements EntityBlock {
     public static final IntegerProperty FILL = IntegerProperty.create("fill", 0, 1);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
-    private final boolean returnsCase; // netherite variant returns empty case
-
     public HardenedCaseBlock(Properties props) {
-        this(props, false);
-    }
-
-    protected HardenedCaseBlock(Properties props, boolean returnsCase) {
         super(props);
-        this.returnsCase = returnsCase;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(FILL, 0).setValue(WATERLOGGED, false));
     }
 
@@ -64,7 +56,7 @@ public class HardenedCaseBlock extends Block implements EntityBlock {
         if (be == null) return InteractionResult.PASS;
 
         ItemStack held = player.getItemInHand(hand);
-        if (be.handlePlayerInteraction(player, hand, held, returnsCase)) {
+        if (be.handlePlayerInteraction(player, held)) {
             return InteractionResult.CONSUME;
         }
         return InteractionResult.PASS;
@@ -93,13 +85,7 @@ public class HardenedCaseBlock extends Block implements EntityBlock {
         return RenderShape.MODEL;
     }
 
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return type == ModBlockEntities.hardened_case.get() && !level.isClientSide ?
-                (level1, pos, state1, blockEntity) -> MetalCaseBlockEntity.tick(level1, pos, state1, (MetalCaseBlockEntity) blockEntity) :
-                null;
-    }
+
     @Override
     public void appendHoverText(ItemStack stack, @Nullable BlockGetter level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);

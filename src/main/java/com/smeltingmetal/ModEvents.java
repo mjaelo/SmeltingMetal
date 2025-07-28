@@ -2,15 +2,17 @@ package com.smeltingmetal;
 
 import com.mojang.logging.LogUtils;
 import com.smeltingmetal.data.MetalProperties;
-import com.smeltingmetal.items.FilledMoldItem;
-import com.smeltingmetal.items.FilledNetheriteMoldItem;
-import com.smeltingmetal.items.MoltenMetalBlockItem;
-import com.smeltingmetal.items.MoltenMetalItem;
+import com.smeltingmetal.data.ModMetals;
+import com.smeltingmetal.items.ModItems;
+import com.smeltingmetal.items.metalBlock.MoltenMetalBlockItem;
+import com.smeltingmetal.items.metalBlock.MoltenMetalBucketItem;
+import com.smeltingmetal.items.metalIngot.FilledMoldItem;
+import com.smeltingmetal.items.metalIngot.FilledNetheriteMoldItem;
+import com.smeltingmetal.items.metalIngot.MoltenMetalItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
@@ -34,7 +36,6 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,61 +60,63 @@ public class ModEvents {
 
         @SubscribeEvent
         public static void onRightClickBlock(PlayerInteractEvent.@NotNull RightClickBlock event) {
+            // Check if the item is a filled mold
             ItemStack heldItem = event.getItemStack();
-            Level level = event.getLevel();
             boolean isFilledMold = heldItem.getItem() == ModItems.FILLED_MOLD.get();
             boolean isFilledNetherite = heldItem.getItem() == ModItems.FILLED_NETHERITE_MOLD.get();
 
-            if (level.isClientSide() || (!isFilledMold && !isFilledNetherite)) {
+            Level level = event.getLevel();
+            if (!isFilledMold && !isFilledNetherite) {
                 return;
             }
 
+            // Check if the block is water
             BlockPos pos = event.getPos().above();
-            Player player = event.getEntity();
-
             boolean isWaterBlock = level.getBlockState(pos).is(Blocks.WATER);
             boolean isWaterFluid = level.getFluidState(pos).is(FluidTags.WATER);
 
             if (!isWaterBlock && !isWaterFluid) {
                 return;
             }
-            String metalType = isFilledMold ? FilledMoldItem.getMetalType(heldItem) : com.smeltingmetal.items.FilledNetheriteMoldItem.getMetalType(heldItem);
+
+            // Get metal properties from mold
+            String metalType = isFilledMold ? FilledMoldItem.getMetalType(heldItem) : FilledNetheriteMoldItem.getMetalType(heldItem);
             Optional<MetalProperties> metalProps = ModMetals.getMetalProperties(metalType);
 
             if (metalProps.isPresent()) {
                 Item ingotItem = ForgeRegistries.ITEMS.getValue(metalProps.get().ingotId());
-
                 if (ingotItem != null && ingotItem != Items.AIR) {
-                    if (player instanceof ServerPlayer serverPlayer) {
-                        if (!serverPlayer.getAbilities().instabuild) {
-                            heldItem.shrink(1);
-                        }
+                    Player serverPlayer = event.getEntity();
+                    // consume mold
+                    if (!serverPlayer.getAbilities().instabuild) {
+                        heldItem.shrink(1);
+                    }
 
-                        // give ingot
-                        if (!serverPlayer.getInventory().add(new ItemStack(ingotItem))) {
-                            serverPlayer.drop(new ItemStack(ingotItem), false);
-                        }
+                    // give ingot
+                    if (!serverPlayer.getInventory().add(new ItemStack(ingotItem))) {
+                        serverPlayer.drop(new ItemStack(ingotItem), false);
+                    }
 
-                        // if netherite variant, also give back empty mold
-                        if (isFilledNetherite) {
-                            ItemStack moldStack = new ItemStack(ModItems.NETHERITE_MOLD.get());
-                            if (!serverPlayer.getInventory().add(moldStack)) {
-                                serverPlayer.drop(moldStack, false);
-                            }
-                        }
-
-                        level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.8F, 1.5F + level.random.nextFloat() * 0.5F);
-
-                        if (level instanceof ServerLevel serverLevel) {
-                            serverLevel.sendParticles(ParticleTypes.SPLASH, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 8, 0.5, 0.1, 0.5, 0.1);
+                    // if netherite variant, also give back empty mold
+                    if (isFilledNetherite) {
+                        ItemStack moldStack = new ItemStack(ModItems.NETHERITE_MOLD.get());
+                        if (!serverPlayer.getInventory().add(moldStack)) {
+                            serverPlayer.drop(moldStack, false);
                         }
                     }
+
+                    level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.8F, 1.5F + level.random.nextFloat() * 0.5F);
+                    if (level instanceof ServerLevel serverLevel) {
+                        serverLevel.sendParticles(ParticleTypes.SPLASH, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 8, 0.5, 0.1, 0.5, 0.1);
+                    }
+
                 } else {
                     LOGGER.error("SmeltingMetalMod: Could not find ingot item for metal type: {} (ResourceLocation: {})", metalType, metalProps.get().ingotId());
                 }
             } else {
                 LOGGER.warn("SmeltingMetalMod: Unrecognized or unregistered metal type in FilledMold: {}", metalType);
             }
+
             event.setCanceled(true);
             event.setResult(Event.Result.ALLOW);
         }
@@ -123,242 +126,94 @@ public class ModEvents {
             ItemEntity itemEntity = event.getItem();
             ItemStack pickedStack = itemEntity.getItem();
 
-            // --------- Handle molten metal BLOCK pickup restriction ----------
-            if (pickedStack.getItem() instanceof MoltenMetalBlockItem blockItem) {
-                Player player = event.getEntity();
-                // Search inventory for first empty bucket
-                ItemStack bucketStack = ItemStack.EMPTY;
-                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                    ItemStack slot = player.getInventory().getItem(i);
-                    if (!slot.isEmpty() && slot.getItem() == Items.BUCKET) {
-                        bucketStack = slot;
-                        break;
-                    }
-                }
+            boolean isMoltenMetalBlock = pickedStack.getItem() instanceof MoltenMetalBlockItem;
+            boolean isMoltenMetalItem = pickedStack.getItem() instanceof MoltenMetalItem;
+            if (!isMoltenMetalBlock && !isMoltenMetalItem) return;
 
-                if (!bucketStack.isEmpty()) {
-                    String metalId = MoltenMetalBlockItem.getMetalId(pickedStack);
-                    if (metalId != null) {
-                        ItemStack moltenBucket = com.smeltingmetal.items.MoltenMetalBucketItem.createStack(metalId);
-                        if (!player.getInventory().add(moltenBucket)) player.drop(moltenBucket, false);
-                        bucketStack.shrink(1);
-                        itemEntity.discard(); // remove ground item
-                        event.setCanceled(true);
-                        return;
-                    }
-                }
-
-                // Otherwise hurt player and keep on ground (can't pick up)
-                player.hurt(player.damageSources().lava(), 4f);
-                event.setCanceled(true);
-                return;
-            }
-            // --------- End molten metal BLOCK pickup restriction ----------
-
-            if (!(pickedStack.getItem() instanceof MoltenMetalItem)) {
-                return; // Not molten metal, let vanilla handle
-            }
-
+            // Search inventory for first required item
             Player player = event.getEntity();
+            ItemStack metalContainerStack = findRequiredItem(isMoltenMetalBlock, player);
 
-            // Count hardened molds in player inventory
-            int moldCount = 0;
-            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                ItemStack slot = player.getInventory().getItem(i);
-                if (!slot.isEmpty() && (slot.getItem() == ModItems.HARDENED_MOLD.get() || slot.getItem() == ModItems.NETHERITE_MOLD.get())) {
-                    moldCount += slot.getCount();
-                }
+            // If no required item found, hurt player and keep on ground (can't pick up)
+            if (metalContainerStack.isEmpty()) {
+                player.hurt(player.damageSources().lava(), 4f);
             }
 
-            if (moldCount > 0) {
-                // Convert up to mold count
-                String metalType = MoltenMetalItem.getMetalId(pickedStack);
-                if (metalType != null && ModMetals.doesMetalExist(metalType)) {
-                    int convert = Math.min(moldCount, pickedStack.getCount());
-
-                    int shrinkLeft = convert;
-                    int netheriteUsed = 0;
-                    for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft > 0; i++) {
-                        ItemStack moldStack = player.getInventory().getItem(i);
-                        if (moldStack.isEmpty()) continue;
-                        if (moldStack.getItem() == ModItems.NETHERITE_MOLD.get()) {
-                            int s = Math.min(shrinkLeft, moldStack.getCount());
-                            if (!player.getAbilities().instabuild) {
-                                moldStack.shrink(s);
-                            }
-                            shrinkLeft -= s;
-                            netheriteUsed += s;
-                        } else if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
-                            int s = Math.min(shrinkLeft, moldStack.getCount());
-                            if (!player.getAbilities().instabuild) {
-                                moldStack.shrink(s);
-                            }
-                            shrinkLeft -= s;
-                        }
-                    }
-
-                    // Give filled molds according to mold type used
-                    if (netheriteUsed > 0) {
-                        ItemStack filledNeth = FilledNetheriteMoldItem.createFilled(metalType);
-                        filledNeth.setCount(netheriteUsed);
-                        if (!player.getInventory().add(filledNeth)) {
-                            player.drop(filledNeth, false);
-                        }
-                    }
-                    int hardenedUsed = convert - netheriteUsed;
-                    if (hardenedUsed > 0) {
-                        ItemStack filledHard = FilledMoldItem.createFilledMold(metalType);
-                        filledHard.setCount(hardenedUsed);
-                        if (!player.getInventory().add(filledHard)) {
-                            player.drop(filledHard, false);
-                        }
-                    }
-
-                    // Reduce or remove picked stack
-                    if (pickedStack.getCount() > convert) {
-                        pickedStack.shrink(convert);
-                        itemEntity.setPickUpDelay(40);
-                    } else {
-                        itemEntity.discard();
-                    }
-
-                    event.setCanceled(true);
-                }
-            } else {
-                // No molds – damage player and keep item in world
-                player.hurt(player.level().damageSources().lava(), 4.0F);
-                itemEntity.setPickUpDelay(40);
-                event.setCanceled(true);
+            // If item found, try to create new filled item
+            else {
+                createNewFilledItem(isMoltenMetalBlock, pickedStack, metalContainerStack, player);
+                itemEntity.discard(); // remove ground item
             }
+
+            event.setCanceled(true);
         }
 
         @SubscribeEvent
         public static void onContainerClose(PlayerContainerEvent.Close event) {
             Player player = event.getEntity();
-            // scan all slots of the closing container for molten metal BLOCK items
-            List<Slot> slots = event.getContainer().slots;
-            for (Slot slot : slots) {
-                ItemStack stack = slot.getItem();
-                if (stack.getItem() instanceof MoltenMetalBlockItem) {
-                    // look for bucket in player inventory
-                    ItemStack bucketStack = ItemStack.EMPTY;
-                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                        ItemStack inv = player.getInventory().getItem(i);
-                        if (!inv.isEmpty() && inv.getItem() == Items.BUCKET) {
-                            bucketStack = inv;
-                            break;
-                        }
-                    }
-                    if (!bucketStack.isEmpty()) {
-                        String metalId = MoltenMetalBlockItem.getMetalId(stack);
-                        if (metalId != null) {
-                            ItemStack moltenBucket = com.smeltingmetal.items.MoltenMetalBucketItem.createStack(metalId);
-                            if (!player.getInventory().add(moltenBucket)) player.drop(moltenBucket, false);
-                            bucketStack.shrink(1);
-                            slot.set(ItemStack.EMPTY);
-                        }
-                    } else {
-                        // no bucket – push stack out into world and clear slot
-                        player.hurt(player.damageSources().lava(), 4f);
-                        ItemEntity e = new ItemEntity(player.level(), player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
-                        player.level().addFreshEntity(e);
-                        slot.set(ItemStack.EMPTY);
-                    }
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public static void onContainerClose2(PlayerContainerEvent.Close event) {
-            Player player = event.getEntity();
             Level level = player.level();
             if (level.isClientSide()) return;
 
-            int moldCount = 0;
-            List<Integer> moltenSlots = new ArrayList<>();
+            for (Slot slot : event.getContainer().slots) {
+                ItemStack stack = slot.getItem();
 
-            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                ItemStack stack = player.getInventory().getItem(i);
-                if (stack.isEmpty()) continue;
-                if (stack.getItem() == ModItems.HARDENED_MOLD.get() || stack.getItem() == ModItems.NETHERITE_MOLD.get()) {
-                    moldCount += stack.getCount();
-                } else if (stack.getItem() instanceof MoltenMetalItem) {
-                    moltenSlots.add(i);
-                }
-            }
+                boolean isMoltenMetalBlock = stack.getItem() instanceof MoltenMetalBlockItem;
+                boolean isMoltenMetalItem = stack.getItem() instanceof MoltenMetalItem;
+                if (!isMoltenMetalBlock && !isMoltenMetalItem) continue;
 
-            if (moltenSlots.isEmpty()) return;
+                // Search inventory for first required item
+                ItemStack metalContainerStack = findRequiredItem(isMoltenMetalBlock, player);
 
-            // Convert as many as possible
-            if (moldCount > 0) {
-                for (int slot : moltenSlots) {
-                    if (moldCount <= 0) break;
-                    ItemStack molten = player.getInventory().getItem(slot);
-                    if (molten.isEmpty()) continue;
+                // If no required item found, hurt player and keep on ground (can't pick up)
+                if (metalContainerStack.isEmpty()) {
+                    player.hurt(player.damageSources().lava(), 4f);
 
-                    String metalType = MoltenMetalItem.getMetalId(molten);
-                    if (metalType == null || !ModMetals.doesMetalExist(metalType)) continue;
-
-                    int toConvert = Math.min(moldCount, molten.getCount());
-
-                    molten.shrink(toConvert);
-                    int shrinkLeft2 = toConvert;
-                    int netheriteUsed2 = 0;
-                    for (int i = 0; i < player.getInventory().getContainerSize() && shrinkLeft2 > 0; i++) {
-                        ItemStack moldStack = player.getInventory().getItem(i);
-                        if (moldStack.isEmpty()) continue;
-                        if (moldStack.getItem() == ModItems.NETHERITE_MOLD.get()) {
-                            int s = Math.min(shrinkLeft2, moldStack.getCount());
-                            if (!player.getAbilities().instabuild) {
-                                moldStack.shrink(s);
-                            }
-                            shrinkLeft2 -= s;
-                            netheriteUsed2 += s;
-                        } else if (moldStack.getItem() == ModItems.HARDENED_MOLD.get()) {
-                            int s = Math.min(shrinkLeft2, moldStack.getCount());
-                            if (!player.getAbilities().instabuild) {
-                                moldStack.shrink(s);
-                            }
-                            shrinkLeft2 -= s;
-                        }
-                    }
-
-                    if (netheriteUsed2 > 0) {
-                        ItemStack filledNeth = FilledNetheriteMoldItem.createFilled(metalType);
-                        filledNeth.setCount(netheriteUsed2);
-                        if (!player.getInventory().add(filledNeth)) {
-                            player.drop(filledNeth, false);
-                        }
-                    }
-                    int hardenedUsed2 = toConvert - netheriteUsed2;
-                    if (hardenedUsed2 > 0) {
-                        ItemStack filledHard = FilledMoldItem.createFilledMold(metalType);
-                        filledHard.setCount(hardenedUsed2);
-                        if (!player.getInventory().add(filledHard)) {
-                            player.drop(filledHard, false);
-                        }
-                    }
-
-                    moldCount -= toConvert;
-                }
-            }
-
-            // Drop any remaining molten metal and damage
-            boolean moltenLeft = false;
-            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                ItemStack stack = player.getInventory().getItem(i);
-                if (!stack.isEmpty() && stack.getItem() instanceof MoltenMetalItem) {
-                    moltenLeft = true;
-                    ItemStack copy = stack.copy();
+                    ItemEntity item = new ItemEntity(level, player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
+                    item.setNoPickUpDelay();
+                    level.addFreshEntity(item);
                     player.getInventory().removeItem(stack);
-                    player.drop(copy, false);
+                    slot.set(ItemStack.EMPTY);
+                }
+
+                // If item found, try to create new filled item
+                else {
+                    createNewFilledItem(isMoltenMetalBlock, stack, metalContainerStack, player);
+                    stack.shrink(1);
                 }
             }
 
-            if (moltenLeft) {
-                player.hurt(level.damageSources().lava(), 4.0F);
+//            event.setCanceled(true);
+        }
+
+        private static void createNewFilledItem(boolean isMoltenMetalBlock, ItemStack moltenItemStack, ItemStack metalContainerStack, Player player) {
+            String metalId = isMoltenMetalBlock ? MoltenMetalBlockItem.getMetalId(moltenItemStack) : MoltenMetalItem.getMetalId(moltenItemStack);
+            if (metalId != null) {
+                // create new item stack
+                ItemStack newItemStack = isMoltenMetalBlock
+                        ? MoltenMetalBucketItem.createStack(metalId)
+                        : metalContainerStack.getItem() == ModItems.HARDENED_MOLD.get()
+                        ? FilledMoldItem.createFilledMold(metalId)
+                        : FilledNetheriteMoldItem.createFilled(metalId);
+
+                newItemStack.setCount(1);
+                player.getInventory().add(newItemStack);
+
+                // consume required item and remove ground item
+                metalContainerStack.shrink(1);
             }
         }
 
+        private static @NotNull ItemStack findRequiredItem(boolean isMoltenMetalBlock, Player player) {
+            ItemStack metalContainerStack = ItemStack.EMPTY;
+            List<Item> requiredItems = isMoltenMetalBlock ? List.of(Items.BUCKET) : List.of(ModItems.HARDENED_MOLD.get(), ModItems.NETHERITE_MOLD.get());
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack slot = player.getInventory().getItem(i);
+                if (!slot.isEmpty() && requiredItems.contains(slot.getItem())) {
+                    metalContainerStack = slot;
+                    break;
+                }
+            }
+            return metalContainerStack;
+        }
     }
 }

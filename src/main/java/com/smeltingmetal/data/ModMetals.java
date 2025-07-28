@@ -1,13 +1,17 @@
-package com.smeltingmetal;
+package com.smeltingmetal.data;
 
 import com.mojang.logging.LogUtils;
-import com.smeltingmetal.config.MetalsConfig;
-import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.MetalsConfig;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
 import java.util.*;
 
+/**
+ * Manages the properties and configurations of all metals in the Smelting Metal mod.
+ * Handles loading metal configurations, applying overrides, and providing access to metal properties.
+ * This includes default metal definitions and any custom metals defined in the configuration.
+ */
 public class ModMetals {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<String, MetalProperties> METAL_PROPERTIES_MAP = new HashMap<>();

@@ -1,14 +1,15 @@
-package com.smeltingmetal;
+package com.smeltingmetal.blocks;
 
-import com.smeltingmetal.blocks.HardenedCaseBlock;
-import com.smeltingmetal.blocks.NetheriteCaseBlock;
+import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.blocks.blocks.HardenedCaseBlock;
+import com.smeltingmetal.blocks.blocks.NetheriteCaseBlock;
+import com.smeltingmetal.items.ModItems;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
@@ -46,16 +47,6 @@ public class ModBlocks {
                     .sound(SoundType.NETHERITE_BLOCK)
                     .noOcclusion()
                     ));
-
-    // ---------------------- BLOCK ITEM REGISTRATION --------------
-    private static void registerBlockItems(IEventBus bus) {
-        ModItems.ITEMS.register(bus);
-    }
-
-    public static void register(IEventBus bus) {
-        BLOCKS.register(bus);
-        registerBlockItems(bus);
-    }
 
     @SubscribeEvent
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {

@@ -1,8 +1,9 @@
 package com.smeltingmetal;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.blocks.ModBlockEntities;
+import com.smeltingmetal.blocks.ModBlocks;
+import com.smeltingmetal.data.ModMetals;
+import com.smeltingmetal.items.ModItems;
 import com.smeltingmetal.recipes.ModRecipes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -18,12 +19,18 @@ import net.minecraftforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// The value here should match an entry in the META-INF/mods.toml file
+/**
+ * Main mod class for the Smelting Metal mod.
+ * This class initializes all mod components, handles configuration loading,
+ * and manages core mod functionality and lifecycle events.
+ * 
+ * <p>The mod enhances Minecraft's smelting system with new mechanics for smelting
+ * and processing various metals, including custom mold and ingot systems.</p>
+ */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {
     // Define mod id in a common place for everything to reference
     public static final String MODID = "smeltingmetal";
-    public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final Logger LOGGER = LoggerFactory.getLogger(SmeltingMetalMod.class);
 
     private static RecipeManager recipeManager;
@@ -39,11 +46,13 @@ public class SmeltingMetalMod {
         modEventBus.addListener(this::setup);
         modEventBus.addListener(this::onConfigReloading);
         
-        // Register items and recipes
+        // Register items and blocks
         ModItems.ITEMS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-        ModRecipes.SERIALIZERS.register(modEventBus);
+        
+        // Register recipes
+        ModRecipes.register(modEventBus);
         
         // Register to the mod event bus for recipe handling
         modEventBus.addListener(this::onRegisterRecipes);
@@ -58,9 +67,7 @@ public class SmeltingMetalMod {
     }
     
     private void setup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            LOGGER.info("SmeltingMetal mod setup complete");
-        });
+        event.enqueueWork(() -> LOGGER.info("SmeltingMetal mod setup complete"));
     }
     
 

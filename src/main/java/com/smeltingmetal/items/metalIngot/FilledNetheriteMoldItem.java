@@ -1,6 +1,6 @@
-package com.smeltingmetal.items;
+package com.smeltingmetal.items.metalIngot;
 
-import com.smeltingmetal.ModItems;
+import com.smeltingmetal.items.ModItems;
 import com.smeltingmetal.SmeltingMetalMod;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
