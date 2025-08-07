@@ -9,6 +9,8 @@ import com.smeltingmetal.items.metalBlock.MoltenMetalBucketItem;
 import com.smeltingmetal.items.metalIngot.FilledMoldItem;
 import com.smeltingmetal.items.metalIngot.FilledNetheriteMoldItem;
 import com.smeltingmetal.items.metalIngot.MoltenMetalItem;
+import com.smeltingmetal.recipes.replacer.RecipeProcessor;
+import com.smeltingmetal.recipes.replacer.RecipeReloadListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
@@ -18,15 +20,16 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -56,6 +59,21 @@ public class ModEvents {
             MinecraftServer server = event.getServer();
             SmeltingMetalMod.setServer(server);
             SmeltingMetalMod.setRecipeManager(server.getRecipeManager());
+        }
+
+        @SubscribeEvent
+        public static void onServerStarted(ServerStartedEvent event) {
+            var server = event.getServer();
+            SmeltingMetalMod.setServer(server);
+            SmeltingMetalMod.setRecipeManager(server.getRecipeManager());
+            RecipeProcessor.process(server.getRecipeManager(), server.registryAccess());
+        }
+
+        @SubscribeEvent
+        public static void onAddReloadListeners(AddReloadListenerEvent event) {
+            // Register our recipe reload listener so recipe modifications run on every datapack reload.
+            LOGGER.info("Registering recipe reload listener …");
+            event.addListener(new RecipeReloadListener(event.getRegistryAccess()));
         }
 
         @SubscribeEvent
@@ -154,9 +172,7 @@ public class ModEvents {
             Level level = player.level();
             if (level.isClientSide()) return;
 
-            for (Slot slot : event.getContainer().slots) {
-                ItemStack stack = slot.getItem();
-
+            for (ItemStack stack : player.getInventory().items) {
                 boolean isMoltenMetalBlock = stack.getItem() instanceof MoltenMetalBlockItem;
                 boolean isMoltenMetalItem = stack.getItem() instanceof MoltenMetalItem;
                 if (!isMoltenMetalBlock && !isMoltenMetalItem) continue;
@@ -164,7 +180,7 @@ public class ModEvents {
                 // Search inventory for first required item
                 ItemStack metalContainerStack = findRequiredItem(isMoltenMetalBlock, player);
 
-                // If no required item found, hurt player and keep on ground (can't pick up)
+                // If no required item found, hurt player and drop the molten item on the ground
                 if (metalContainerStack.isEmpty()) {
                     player.hurt(player.damageSources().lava(), 4f);
 
@@ -172,7 +188,6 @@ public class ModEvents {
                     item.setNoPickUpDelay();
                     level.addFreshEntity(item);
                     player.getInventory().removeItem(stack);
-                    slot.set(ItemStack.EMPTY);
                 }
 
                 // If item found, try to create new filled item
@@ -181,8 +196,6 @@ public class ModEvents {
                     stack.shrink(1);
                 }
             }
-
-//            event.setCanceled(true);
         }
 
         private static void createNewFilledItem(boolean isMoltenMetalBlock, ItemStack moltenItemStack, ItemStack metalContainerStack, Player player) {

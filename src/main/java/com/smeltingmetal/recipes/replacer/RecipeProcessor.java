@@ -6,39 +6,32 @@ import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.ModMetals;
 import com.smeltingmetal.items.ModItems;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.smeltingmetal.SmeltingMetalMod.MODID;
 
 /**
- * Called when the server starts. This is the entry point for all recipe modifications.
+ * This class is used to process and modify recipes.
  */
-@Mod.EventBusSubscriber(modid = MODID)
 public class RecipeProcessor {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
-        RecipeManager recipeManager = SmeltingMetalMod.getRecipeManager();
+    public static void process(RecipeManager recipeManager, RegistryAccess registryAccess) {
         if (recipeManager == null) {
             LOGGER.warn(MODID + " RecipeManager is not available, skipping recipe modifications.");
             return;
         }
-
-        MinecraftServer server = event.getServer();
-        RegistryAccess registryAccess = server.registryAccess();
 
         if (MetalsConfig.CONFIG.enableMetalMelting.get()) {
             removeExistingMetalMeltingRecipes(recipeManager, registryAccess);
@@ -51,7 +44,17 @@ public class RecipeProcessor {
             replaceNuggetCraftingRecipes(recipeManager, registryAccess);
         }
 
+        syncRecipesToPlayers();
         LOGGER.info("===== RECIPE MODIFICATIONS COMPLETE =====");
+    }
+
+    private static void syncRecipesToPlayers() {
+        if (SmeltingMetalMod.getServer() == null) return;
+        var packet = new ClientboundUpdateRecipesPacket(
+                SmeltingMetalMod.getServer().getRecipeManager().getRecipes());
+        for (var p : SmeltingMetalMod.getServer().getPlayerList().getPlayers()) {
+            p.connection.send(packet);
+        }
     }
 
     public static void removeBlockCraftingRecipes(RecipeManager recipeManager) {
@@ -61,7 +64,11 @@ public class RecipeProcessor {
                 .filter(r -> r instanceof ShapedRecipe)
                 .filter(r -> {
                     ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(r.getResultItem(SmeltingMetalMod.getServer().registryAccess()).getItem());
-                    return resultId != null && resultId.getPath().endsWith("_block");
+                    if (resultId == null) return false;
+                    String path = resultId.getPath();
+                    if (!path.endsWith("_block") || path.startsWith("raw_")) return false;
+                    String metalKey = path.substring(0, path.length() - 6);
+                    return ModMetals.getMetalProperties(metalKey).isPresent();
                 })
                 .map(Recipe::getId)
                 .toList();
