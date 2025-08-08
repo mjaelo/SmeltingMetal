@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -84,22 +85,21 @@ public class MoltenMetalItem extends CoolingItem {
             return null;
         }
 
-        String[] parts = metalId.split(":", 2);
-        String namespace = parts.length == 2 ? parts[0] : "minecraft";
-        String path = parts.length == 2 ? parts[1] : parts[0];
-
-        // First try to get raw item
-        Item rawItem = CoolingItem.getItem(new ResourceLocation(namespace, "raw_" + path));
-
-        // Fall back to ingot if raw item doesn't exist
-        if (rawItem == null || rawItem == Items.AIR) {
-            rawItem = CoolingItem.getItem(getIngotId(stack));
-        }
-
-        if (rawItem != null && rawItem != Items.AIR) {
-            return new ItemStack(rawItem, stack.getCount());
-        }
-        return null;
+        // Get the metal properties to access the raw item ID
+        return ModMetals.getMetalProperties(metalId)
+                .map(metalProps -> {
+                    // Use the raw item ID from MetalProperties
+                    Item rawItem = ForgeRegistries.ITEMS.getValue(metalProps.rawId());
+                    if (rawItem != null && rawItem != Items.AIR) {
+                        return new ItemStack(rawItem, stack.getCount());
+                    }
+                    // Fallback to ingot if raw item is not available (shouldn't happen as raw is required)
+                    rawItem = ForgeRegistries.ITEMS.getValue(metalProps.ingotId());
+                    return rawItem != null && rawItem != Items.AIR 
+                            ? new ItemStack(rawItem, stack.getCount()) 
+                            : null;
+                })
+                .orElse(null);
     }
 
 }

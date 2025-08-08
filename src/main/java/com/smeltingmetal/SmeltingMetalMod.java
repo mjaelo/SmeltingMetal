@@ -29,9 +29,8 @@ import org.slf4j.LoggerFactory;
  */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {
-    // Define mod id in a common place for everything to reference
     public static final String MODID = "smeltingmetal";
-    private static final Logger LOGGER = LoggerFactory.getLogger(SmeltingMetalMod.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(SmeltingMetalMod.class);
 
     private static RecipeManager recipeManager;
     private static MinecraftServer server;

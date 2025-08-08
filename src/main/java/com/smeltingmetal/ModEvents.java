@@ -13,7 +13,9 @@ import com.smeltingmetal.recipes.replacer.RecipeProcessor;
 import com.smeltingmetal.recipes.replacer.RecipeReloadListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -32,7 +34,9 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -168,7 +172,33 @@ public class ModEvents {
 
         @SubscribeEvent
         public static void onContainerClose(PlayerContainerEvent.Close event) {
-            Player player = event.getEntity();
+            handleMoltenItems(event.getEntity());
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onDepotInteract(PlayerInteractEvent.RightClickBlock event) {
+            // Only proceed if Create mod is present
+            if (!ModList.get().isLoaded("create")) return;
+
+            Level level = event.getLevel();
+            if (level.isClientSide()) return;
+
+            // Check if the clicked block is the Depot from Create mod (id: create:depot)
+            ResourceLocation clickedBlockId = ForgeRegistries.BLOCKS.getKey(level.getBlockState(event.getPos()).getBlock());
+            if (clickedBlockId != null && "create".equals(clickedBlockId.getNamespace()) && "depot".equals(clickedBlockId.getPath())) {
+                // Schedule the check for the end of the tick
+                MinecraftServer server = level.getServer();
+                if (server != null) {
+                    server.tell(new TickTask(server.getTickCount() + 1, () -> handleMoltenItems(event.getEntity())));
+                }
+            }
+        }
+
+        /**
+         * Iterate over player's inventory and apply molten metal safety / filling logic.
+         * Shared by multiple event handlers (container close, Create depot interaction, etc.).
+         */
+        private static void handleMoltenItems(Player player) {
             Level level = player.level();
             if (level.isClientSide()) return;
 

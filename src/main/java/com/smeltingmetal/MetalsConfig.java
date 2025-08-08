@@ -28,11 +28,12 @@ public class MetalsConfig {
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
-        public final ForgeConfigSpec.BooleanValue enableMetalMelting;
+        public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
+        public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
         
         private static final Predicate<Object> METAL_DEFINITION_VALIDATOR = 
-            obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+=[a-z0-9_.-]+:[a-z0-9_.-]+$");
+            obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+$");
         
         private static final Predicate<Object> KEYWORD_VALIDATOR =
             obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+$");
@@ -41,15 +42,15 @@ public class MetalsConfig {
             builder.comment("Metal processing configuration")
                   .push("metals");
             
-            // Default metal definitions
+            // Default metal definitions (simple format: modid:metal_name)
             List<String> defaultMetals = List.of(
-                "minecraft:iron=minecraft:iron_ingot",
-                "minecraft:gold=minecraft:gold_ingot",
-                "minecraft:copper=minecraft:copper_ingot"
+                "minecraft:iron",
+                "minecraft:gold",
+                "minecraft:copper"
             );
             
             metalDefinitions = builder
-                .comment("List of metal definitions in format: modid:metal_id=ingot_modid:ingot_id")
+                .comment("List of metal definitions in format: modid:metal_name (e.g., minecraft:iron)")
                 .defineList(
                     "metal_definitions", 
                     defaultMetals, 
@@ -57,9 +58,10 @@ public class MetalsConfig {
                 );
             
             // Blacklisted substrings for ingredients / items (e.g., block, nugget)
+            // Blacklist keywords for items that should not be processed
             List<String> defaultBlacklist = List.of("block", "nugget");
             blacklistKeywords = builder
-                .comment("List of substrings; if an ingredient's registry path contains any of these, the recipe is skipped from molten replacement")
+                .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
                 .defineList("blacklist_keywords", defaultBlacklist, KEYWORD_VALIDATOR);
             
             builder.pop();
@@ -68,9 +70,13 @@ public class MetalsConfig {
             builder.comment("Feature toggles")
                   .push("features");
             
-            enableMetalMelting = builder
+            enableMeltingRecipeReplacement = builder
                 .comment("Enable replacement of smelting/blasting recipes with molten metal recipes")
-                .define("enable_metal_melting", true);
+                .define("enable_melting_recipe_replacement", true);
+                
+            enableCrushingRecipeReplacement = builder
+                .comment("Enable replacement of crushing recipes with crushed metal recipes")
+                .define("enable_crushing_recipe_replacement", true);
                 
             enableNuggetRecipeReplacement = builder
                 .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")

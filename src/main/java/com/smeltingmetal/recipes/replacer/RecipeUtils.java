@@ -1,6 +1,8 @@
 package com.smeltingmetal.recipes.replacer;
 
 import com.mojang.logging.LogUtils;
+import com.simibubi.create.content.kinetics.crusher.CrushingRecipe;
+import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.smeltingmetal.MetalsConfig;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.ModMetals;
@@ -167,7 +169,6 @@ public class RecipeUtils {
             newByName.remove(recipeId);
             byNameField.set(recipeManager, Collections.unmodifiableMap(newByName));
 
-            LOGGER.debug("Successfully removed recipe: {}", recipeId);
             return true;
         } catch (Exception e) {
             LOGGER.error("Failed to remove recipe: {}", recipeId, e);
@@ -190,5 +191,37 @@ public class RecipeUtils {
                 new BlastingRecipe(recipeId, "", CookingBookCategory.MISC, ingredient, output, xp, time / 2);
 
         replaceRecipeInManager(recipeManager, recipeId, recipe);
+    }
+
+    public static void createAndAddCrushingRecipe(RecipeManager recipeManager, Item input, ItemStack result) {
+        try {
+            // Create a unique recipe ID based on the input and output items
+            ResourceLocation recipeId = new ResourceLocation(
+                SmeltingMetalMod.MODID,
+                "crushing/" + ForgeRegistries.ITEMS.getKey(input).getPath() + "_to_" + ForgeRegistries.ITEMS.getKey(result.getItem()).getPath()
+            );
+            
+            // Create a new processing recipe builder for crushing
+            ProcessingRecipeBuilder<CrushingRecipe> builder = new ProcessingRecipeBuilder<>(
+                CrushingRecipe::new,  // Recipe factory
+                recipeId             // Recipe ID
+            );
+            
+            // Configure and build the recipe
+            builder.withItemIngredients(Ingredient.of(input))  // Input ingredient
+                   .output(result)                             // Output result
+                   .output(.1f, result)                        // Secondary output with 10% chance
+                   .build();
+            
+            // Manually register the recipe since we're not in a datagen context
+            CrushingRecipe recipe = builder.build();
+            replaceRecipeInManager(recipeManager, recipeId, recipe);
+            
+        } catch (Exception e) {
+            LOGGER.error("Failed to create crushing recipe for {} -> {}: {}", 
+                ForgeRegistries.ITEMS.getKey(input), 
+                ForgeRegistries.ITEMS.getKey(result.getItem()),
+                e.getMessage());
+        }
     }
 }
