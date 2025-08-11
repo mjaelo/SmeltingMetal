@@ -13,7 +13,7 @@ import java.util.function.Predicate;
 public class MetalsConfig {
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static final Config CONFIG;
-    
+
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         CONFIG = new Config(builder);
@@ -31,57 +31,57 @@ public class MetalsConfig {
         public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
-        
-        private static final Predicate<Object> METAL_DEFINITION_VALIDATOR = 
-            obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+$");
-        
+
+        private static final Predicate<Object> METAL_DEFINITION_VALIDATOR =
+                obj -> obj instanceof String && ((String) obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+$");
+
         private static final Predicate<Object> KEYWORD_VALIDATOR =
-            obj -> obj instanceof String && ((String)obj).matches("^[a-z0-9_.-]+$");
-        
+                obj -> obj instanceof String && ((String) obj).matches("^[a-z0-9_.-]+$");
+
         public Config(ForgeConfigSpec.Builder builder) {
             builder.comment("Metal processing configuration")
-                  .push("metals");
-            
+                    .push("metals");
+
             // Default metal definitions (simple format: modid:metal_name)
             List<String> defaultMetals = List.of(
-                "minecraft:iron",
-                "minecraft:gold",
-                "minecraft:copper"
+                    "minecraft:iron",
+                    "minecraft:gold",
+                    "minecraft:copper"
             );
-            
+
             metalDefinitions = builder
-                .comment("List of metal definitions in format: modid:metal_name (e.g., minecraft:iron)")
-                .defineList(
-                    "metal_definitions", 
-                    defaultMetals, 
-                    METAL_DEFINITION_VALIDATOR
-                );
-            
+                    .comment("List of metal definitions in format: modid:metal_name (e.g., minecraft:iron)")
+                    .defineList(
+                            "metal_definitions",
+                            defaultMetals,
+                            METAL_DEFINITION_VALIDATOR
+                    );
+
             // Blacklisted substrings for ingredients / items (e.g., block, nugget)
             // Blacklist keywords for items that should not be processed
-            List<String> defaultBlacklist = List.of("block", "nugget");
+            List<String> defaultBlacklist = List.of("nugget");
             blacklistKeywords = builder
-                .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
-                .defineList("blacklist_keywords", defaultBlacklist, KEYWORD_VALIDATOR);
-            
+                    .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
+                    .defineList("blacklist_keywords", defaultBlacklist, KEYWORD_VALIDATOR);
+
             builder.pop();
-            
+
             // Feature toggles
             builder.comment("Feature toggles")
-                  .push("features");
-            
+                    .push("features");
+
             enableMeltingRecipeReplacement = builder
-                .comment("Enable replacement of smelting/blasting recipes with molten metal recipes")
-                .define("enable_melting_recipe_replacement", true);
-                
+                    .comment("Enable replacement of smelting/blasting recipes with molten metal recipes")
+                    .define("enable_melting_recipe_replacement", true);
+
             enableCrushingRecipeReplacement = builder
-                .comment("Enable replacement of crushing recipes with crushed metal recipes")
-                .define("enable_crushing_recipe_replacement", true);
-                
+                    .comment("Enable replacement of crushing recipes with crushed metal recipes")
+                    .define("enable_crushing_recipe_replacement", true);
+
             enableNuggetRecipeReplacement = builder
-                .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")
-                .define("enable_nugget_recipe_replacement", true);
-                
+                    .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")
+                    .define("enable_nugget_recipe_replacement", true);
+
             builder.pop();
         }
     }

@@ -2,6 +2,7 @@ package com.smeltingmetal.blocks.blockentity;
 
 import com.smeltingmetal.blocks.ModBlockEntities;
 import com.smeltingmetal.blocks.blocks.HardenedCaseBlock;
+import com.smeltingmetal.data.ModMetals;
 import com.smeltingmetal.items.metalBlock.MoltenMetalBucketItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -16,8 +17,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.Map;
 
 /**
  * Stores up to one MoltenMetalItem of the same metal-id.  On water contact when full
@@ -30,6 +34,43 @@ public class MetalCaseBlockEntity extends BlockEntity {
 
     public MetalCaseBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.hardened_case.get(), pos, state);
+    }
+    
+    private static final String METAL_TYPE_KEY = "MetalType";
+    
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        if (tag.contains(METAL_TYPE_KEY)) {
+            this.metalType = tag.getString(METAL_TYPE_KEY);
+        }
+        // Ensure block state matches the metalType when loaded
+        if (level != null && !level.isClientSide && metalType == null) {
+            BlockState currentState = getBlockState();
+            if (currentState.getValue(HardenedCaseBlock.FILL) != 0) {
+                level.setBlock(worldPosition, currentState.setValue(HardenedCaseBlock.FILL, 0), 3);
+            }
+        }
+    }
+    
+    @Override
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        if (this.metalType != null) {
+            tag.putString(METAL_TYPE_KEY, this.metalType);
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide && metalType == null) {
+            // If metalType is null, ensure block state is empty
+            BlockState currentState = getBlockState();
+            if (currentState.getValue(HardenedCaseBlock.FILL) != 0) {
+                level.setBlock(worldPosition, currentState.setValue(HardenedCaseBlock.FILL, 0), 3);
+            }
+        }
     }
 
 
@@ -54,11 +95,55 @@ public class MetalCaseBlockEntity extends BlockEntity {
             return true;
         }
 
+        // Empty bucket filling
+        else if (metalType != null && held.getItem() == Items.BUCKET) {
+            // Create the appropriate bucket item based on metal properties
+            ItemStack filledBucket = ModMetals.getMetalProperties(metalType)
+                    .map(metalProps -> metalProps.bucketId() != null
+                            ? new ItemStack(ForgeRegistries.ITEMS.getValue(metalProps.bucketId()))
+                            : MoltenMetalBucketItem.createStack(metalType))
+                    .orElse(ItemStack.EMPTY);
+
+            if (filledBucket.isEmpty()) return false;
+
+            if (!player.getAbilities().instabuild) {
+                // Consume the empty bucket
+                held.shrink(1);
+                
+                // Give the filled bucket to the player
+                if (!player.getInventory().add(filledBucket)) {
+                    player.drop(filledBucket, false);
+                }
+            }
+
+            // Update block state to empty
+            if (level != null) {
+                BlockState newState = getBlockState().setValue(HardenedCaseBlock.FILL, 0);
+                level.setBlock(worldPosition, newState, 3);
+                metalType = null; // Clear the metal type
+                setChanged();
+            }
+            
+            // Play sound
+            level.playSound(null, worldPosition, SoundEvents.BUCKET_FILL_LAVA, SoundSource.BLOCKS, 1.0f, 1.0f);
+            return true;
+        }
+
         // Molten bucket pouring
-        if (metalType == null && held.getItem() instanceof MoltenMetalBucketItem) {
-            String bucketMetalId = MoltenMetalBucketItem.getMetalId(held);
-            if (bucketMetalId == null) return false;
-            metalType = bucketMetalId;
+        else if (metalType == null) {
+            // Check if held item matches any bucketId in METAL_PROPERTIES_MAP
+            String declaredBucketId = ModMetals.getAllMetalProperties().entrySet().stream()
+                    .filter(entry -> entry.getValue().bucketId() != null &&
+                            ForgeRegistries.ITEMS.getKey(held.getItem()).equals(entry.getValue().bucketId()))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+
+            // set generic metal type if no declared bucketId found
+            metalType = declaredBucketId == null ? MoltenMetalBucketItem.getMetalId(held) : declaredBucketId;
+
+            if (metalType == null) return false;
+
             if (!player.getAbilities().instabuild) {
                 // consume bucket and give empty one
                 held.shrink(1);

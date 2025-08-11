@@ -20,9 +20,11 @@ public record MetalProperties(
     ResourceLocation rawId,
     ResourceLocation rawBlockId,
     @Nullable ResourceLocation nuggetId,
-    @Nullable ResourceLocation crushedId
+    @Nullable ResourceLocation crushedId,
+    @Nullable ResourceLocation bucketId,
+    @Nullable ResourceLocation liquidId
 ) {
     public MetalProperties(String id, ResourceLocation ingotId, ResourceLocation rawId, ResourceLocation rawBlockId) {
-        this(id, ingotId, rawId, rawBlockId, null, null);
+        this(id, ingotId, rawId, rawBlockId, null, null, null, null);
     }
 }

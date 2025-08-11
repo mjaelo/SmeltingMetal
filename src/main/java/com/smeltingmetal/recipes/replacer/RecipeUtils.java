@@ -1,25 +1,25 @@
 package com.smeltingmetal.recipes.replacer;
 
 import com.mojang.logging.LogUtils;
-import com.simibubi.create.content.kinetics.crusher.CrushingRecipe;
-import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.smeltingmetal.MetalsConfig;
-import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.ModMetals;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RecipeUtils {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static void replaceRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
+    public static void createInRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId, Recipe<?> newRecipe) {
         try {
             Field recipesField = getRecipesField();
             recipesField.setAccessible(true);
@@ -77,12 +77,6 @@ public class RecipeUtils {
         if (itemId == null) return null;
         String path = itemId.getPath();
 
-        ResourceLocation derivedIngotId = deriveIngotId(itemId);
-        if (derivedIngotId != null) {
-            String metalId = ModMetals.getMetalId(derivedIngotId);
-            if (metalId != null) return metalId;
-        }
-
         String pathLower = path.toLowerCase();
         for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
             if (pathLower.contains(bad)) return null;
@@ -95,19 +89,8 @@ public class RecipeUtils {
         return null;
     }
 
-    private static ResourceLocation deriveIngotId(ResourceLocation resultId) {
-        if (resultId == null) return null;
-        String path = resultId.getPath();
-        if (path.endsWith("_ingot")) return resultId;
-        if (path.endsWith("_nugget")) {
-            String base = path.substring(0, path.length() - 7);
-            return new ResourceLocation(resultId.getNamespace(), base + "_ingot");
-        }
-        return null;
-    }
-
-    public static boolean isInputBlacklisted(Recipe<?> recipe) {
-        if (!(recipe instanceof AbstractCookingRecipe cooking) || cooking.getIngredients().isEmpty()) return false;
+    public static boolean isInputNotBlacklisted(Recipe<?> recipe) {
+        if (!(recipe instanceof AbstractCookingRecipe cooking) || cooking.getIngredients().isEmpty()) return true;
         Ingredient ing = cooking.getIngredients().get(0);
         for (ItemStack st : ing.getItems()) {
             ResourceLocation rid = ForgeRegistries.ITEMS.getKey(st.getItem());
@@ -115,28 +98,35 @@ public class RecipeUtils {
             String p = rid.getPath().toLowerCase();
             for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
                 if (p.contains(bad)) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
-    public static boolean isInputBlacklisted(ItemStack stack) {
-        ResourceLocation rid = ForgeRegistries.ITEMS.getKey(stack.getItem());
-        if (rid == null) return false;
+    public static @Nullable ResourceLocation getRecipeResultLocation(RegistryAccess registryAccess, Recipe<?> recipe) {
+        ItemStack resultStack = recipe.getResultItem(registryAccess);
+        if (resultStack.isEmpty()) {
+            return null;
+        }
+
+        ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(resultStack.getItem());
+        return resultId;
+    }
+
+    public static boolean isItemNotBlacklisted(ResourceLocation rid) {
+        if (rid == null) return true;
         String p = rid.getPath().toLowerCase();
         for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
             if (p.contains(bad)) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
-
-
-    public static boolean removeRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId) {
+    public static void removeRecipeInManager(RecipeManager recipeManager, ResourceLocation recipeId) {
         try {
             Field recipesField = getRecipesField();
             recipesField.setAccessible(true);
@@ -147,7 +137,7 @@ public class RecipeUtils {
             Recipe<?> recipeToRemove = recipeManager.byKey(recipeId).orElse(null);
             if (recipeToRemove == null) {
                 LOGGER.warn("Attempted to remove recipe '{}' but it was not found in the manager.", recipeId);
-                return false;
+                return ;
             }
             RecipeType<?> type = recipeToRemove.getType();
 
@@ -169,59 +159,8 @@ public class RecipeUtils {
             newByName.remove(recipeId);
             byNameField.set(recipeManager, Collections.unmodifiableMap(newByName));
 
-            return true;
         } catch (Exception e) {
             LOGGER.error("Failed to remove recipe: {}", recipeId, e);
-            return false;
-        }
-    }
-
-    public static void createAndAddCookingRecipe(RecipeManager recipeManager, Item input, ItemStack output, RecipeType<?> type, int time, float xp) {
-        ResourceLocation inputId = ForgeRegistries.ITEMS.getKey(input);
-        if (inputId == null) return;
-
-        String typeName = type == RecipeType.SMELTING ? "smelting" : "blasting";
-        String idName = String.format("%s_%s_%s", typeName, inputId.getNamespace(), inputId.getPath());
-
-        ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID, idName);
-        Ingredient ingredient = Ingredient.of(input);
-
-        AbstractCookingRecipe recipe = type == RecipeType.SMELTING ?
-                new SmeltingRecipe(recipeId, "", CookingBookCategory.MISC, ingredient, output, xp, time) :
-                new BlastingRecipe(recipeId, "", CookingBookCategory.MISC, ingredient, output, xp, time / 2);
-
-        replaceRecipeInManager(recipeManager, recipeId, recipe);
-    }
-
-    public static void createAndAddCrushingRecipe(RecipeManager recipeManager, Item input, ItemStack result) {
-        try {
-            // Create a unique recipe ID based on the input and output items
-            ResourceLocation recipeId = new ResourceLocation(
-                SmeltingMetalMod.MODID,
-                "crushing/" + ForgeRegistries.ITEMS.getKey(input).getPath() + "_to_" + ForgeRegistries.ITEMS.getKey(result.getItem()).getPath()
-            );
-            
-            // Create a new processing recipe builder for crushing
-            ProcessingRecipeBuilder<CrushingRecipe> builder = new ProcessingRecipeBuilder<>(
-                CrushingRecipe::new,  // Recipe factory
-                recipeId             // Recipe ID
-            );
-            
-            // Configure and build the recipe
-            builder.withItemIngredients(Ingredient.of(input))  // Input ingredient
-                   .output(result)                             // Output result
-                   .output(.1f, result)                        // Secondary output with 10% chance
-                   .build();
-            
-            // Manually register the recipe since we're not in a datagen context
-            CrushingRecipe recipe = builder.build();
-            replaceRecipeInManager(recipeManager, recipeId, recipe);
-            
-        } catch (Exception e) {
-            LOGGER.error("Failed to create crushing recipe for {} -> {}: {}", 
-                ForgeRegistries.ITEMS.getKey(input), 
-                ForgeRegistries.ITEMS.getKey(result.getItem()),
-                e.getMessage());
         }
     }
 }

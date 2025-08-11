@@ -65,7 +65,7 @@ public class ModEvents {
             SmeltingMetalMod.setRecipeManager(server.getRecipeManager());
         }
 
-        @SubscribeEvent
+        @SubscribeEvent(priority = EventPriority.LOWEST)
         public static void onServerStarted(ServerStartedEvent event) {
             var server = event.getServer();
             SmeltingMetalMod.setServer(server);
@@ -210,13 +210,38 @@ public class ModEvents {
                 // Search inventory for first required item
                 ItemStack metalContainerStack = findRequiredItem(isMoltenMetalBlock, player);
 
-                // If no required item found, hurt player and drop the molten item on the ground
+                // If no required item found, handle based on whether the metal has a liquid form
                 if (metalContainerStack.isEmpty()) {
+                    String metalId = isMoltenMetalBlock ? 
+                            MoltenMetalBlockItem.getMetalId(stack) : 
+                            MoltenMetalItem.getMetalId(stack);
+                    
+                    // Check if this metal has a liquid form
+                    boolean hasLiquidForm = ModMetals.getMetalProperties(metalId)
+                            .map(metalProps -> metalProps.liquidId() != null)
+                            .orElse(false);
+                    
+                    if (isMoltenMetalBlock && hasLiquidForm) {
+                        // Place the liquid in front of the player
+                        BlockPos pos = player.blockPosition().relative(player.getDirection());
+                        if (level.isEmptyBlock(pos) || level.getBlockState(pos).canBeReplaced()) {
+                            ModMetals.getMetalProperties(metalId).ifPresent(metalProps -> {
+                                if (metalProps.liquidId() != null) {
+                                    var fluid = ForgeRegistries.FLUIDS.getValue(metalProps.liquidId());
+                                    if (fluid != null) {
+                                        level.setBlockAndUpdate(pos, fluid.defaultFluidState().createLegacyBlock());
+                                        level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 1.0f, 1.0f);
+                                    }
+                                }
+                            });
+                        }
+                    } else {
+                        // If no liquid form, drop the item
+                        ItemEntity item = new ItemEntity(level, player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
+                        item.setNoPickUpDelay();
+                        level.addFreshEntity(item);
+                    }
                     player.hurt(player.damageSources().lava(), 4f);
-
-                    ItemEntity item = new ItemEntity(level, player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
-                    item.setNoPickUpDelay();
-                    level.addFreshEntity(item);
                     player.getInventory().removeItem(stack);
                 }
 
@@ -232,17 +257,36 @@ public class ModEvents {
             String metalId = isMoltenMetalBlock ? MoltenMetalBlockItem.getMetalId(moltenItemStack) : MoltenMetalItem.getMetalId(moltenItemStack);
             if (metalId != null) {
                 // create new item stack
-                ItemStack newItemStack = isMoltenMetalBlock
-                        ? MoltenMetalBucketItem.createStack(metalId)
-                        : metalContainerStack.getItem() == ModItems.HARDENED_MOLD.get()
-                        ? FilledMoldItem.createFilledMold(metalId)
-                        : FilledNetheriteMoldItem.createFilled(metalId);
+                ItemStack newItemStack;
+                if (isMoltenMetalBlock) {
+                    // Get the appropriate item based on bucketId
+                    newItemStack = ModMetals.getMetalProperties(metalId)
+                            .map(metalProps -> metalProps.bucketId() != null 
+                                    ? new ItemStack(ForgeRegistries.ITEMS.getValue(metalProps.bucketId())) 
+                                    : MoltenMetalBucketItem.createStack(metalId))
+                            .orElse(ItemStack.EMPTY);
+                } else {
+                    newItemStack = metalContainerStack.getItem() == ModItems.HARDENED_MOLD.get()
+                            ? FilledMoldItem.createFilledMold(metalId)
+                            : FilledNetheriteMoldItem.createFilled(metalId);
+                }
 
-                newItemStack.setCount(1);
-                player.getInventory().add(newItemStack);
-
-                // consume required item and remove ground item
-                metalContainerStack.shrink(1);
+                if (!newItemStack.isEmpty()) {
+                    newItemStack.setCount(1);
+                    // If container stack will be empty after shrink, replace it with the new item
+                    if (metalContainerStack.getCount() == 1) {
+                        int slot = player.getInventory().findSlotMatchingItem(metalContainerStack);
+                        if (slot != -1) {
+                            player.getInventory().setItem(slot, newItemStack);
+                        } else {
+                            player.getInventory().add(newItemStack);
+                        }
+                    } else {
+                        player.getInventory().add(newItemStack);
+                    }
+                    // consume required item and remove ground item
+                    metalContainerStack.shrink(1);
+                }
             }
         }
 

@@ -69,11 +69,4 @@ public class ModItems {
         }
     }
 
-    public static ItemStack getMoltenMetalStack(String metalId) {
-        return MoltenMetalItem.createStack(metalId);
-    }
-
-    public static ItemStack getMoltenMetalBlockStack(String metalId) {
-        return MoltenMetalBlockItem.createStack(metalId);
-    }
 }
