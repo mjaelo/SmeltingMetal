@@ -163,7 +163,7 @@ public class RecipeProcessor {
 
             // Get the molten metal block stack
             MetalProperties metalProps = ModMetals.getMetalProperties(metalKey).get();
-            boolean isBlock = ForgeRegistries.BLOCKS.containsKey(itemId);
+            boolean isBlock = isItemBlock(itemId);
             Item resultItem = ForgeRegistries.ITEMS.getValue(metalProps.crushedId());
             if (resultItem == null || resultItem == Items.AIR) {
                 continue;
@@ -224,7 +224,7 @@ public class RecipeProcessor {
 
             // Get the molten metal block stack
             MetalProperties metalProps = ModMetals.getMetalProperties(metalKey).get();
-            boolean isBlock = ForgeRegistries.BLOCKS.containsKey(itemId);
+            boolean isBlock = isItemBlock(itemId);
             ItemStack resultStack = isBlock
                     ? MoltenMetalBlockItem.createStack(metalProps.id())
                     : MoltenMetalItem.createStack(metalProps.id());
@@ -268,5 +268,15 @@ public class RecipeProcessor {
         for (var p : SmeltingMetalMod.getServer().getPlayerList().getPlayers()) {
             p.connection.send(packet);
         }
+    }
+
+    private static boolean isItemBlock(ResourceLocation itemId) {
+        if (itemId == null) {
+            return false;
+        }
+        
+        String path = itemId.getPath();
+        return MetalsConfig.CONFIG.blockKeywords.get().stream()
+                .anyMatch(keyword -> path.contains(keyword));
     }
 }

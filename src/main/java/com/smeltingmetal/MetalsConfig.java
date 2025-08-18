@@ -28,15 +28,11 @@ public class MetalsConfig {
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockKeywords;
         public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
 
-        private static final Predicate<Object> METAL_DEFINITION_VALIDATOR =
-                obj -> obj instanceof String && ((String) obj).matches("^[a-z0-9_.-]+:[a-z0-9_.-]+$");
-
-        private static final Predicate<Object> KEYWORD_VALIDATOR =
-                obj -> obj instanceof String && ((String) obj).matches("^[a-z0-9_.-]+$");
 
         public Config(ForgeConfigSpec.Builder builder) {
             builder.comment("Metal processing configuration")
@@ -54,15 +50,20 @@ public class MetalsConfig {
                     .defineList(
                             "metal_definitions",
                             defaultMetals,
-                            METAL_DEFINITION_VALIDATOR
+                            obj -> true
                     );
 
-            // Blacklisted substrings for ingredients / items (e.g., block, nugget)
             // Blacklist keywords for items that should not be processed
             List<String> defaultBlacklist = List.of("nugget");
             blacklistKeywords = builder
                     .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
-                    .defineList("blacklist_keywords", defaultBlacklist, KEYWORD_VALIDATOR);
+                    .defineList("blacklist_keywords", defaultBlacklist, obj -> true);
+
+            // Block keywords for identifying block items
+            List<String> defaultBlockKeywords = List.of("block", "slab", "stairs", "wall", "bricks", "tiles");
+            blockKeywords = builder
+                    .comment("List of keywords that identify block items. Any item containing these strings in its registry name will be treated as a block.")
+                    .defineList("block_keywords", defaultBlockKeywords, obj -> true);
 
             builder.pop();
 
