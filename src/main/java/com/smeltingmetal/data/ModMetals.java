@@ -22,47 +22,34 @@ public class ModMetals {
 
     private static Map<String, MetalProperties> createDefaultMetals() {
         Map<String, MetalProperties> defaults = new HashMap<>();
-        
+
         // Add default metals - we know these exist in vanilla
         defaults.put("minecraft:iron", new MetalProperties(
-            "minecraft:iron",
-            new ResourceLocation("minecraft:iron_ingot"),
-            new ResourceLocation("minecraft:raw_iron"),
-            new ResourceLocation("minecraft:raw_iron_block"),
-            new ResourceLocation("minecraft:iron_nugget"),
-            null, null, null
-        ));
-        
-        defaults.put("minecraft:gold", new MetalProperties(
-            "minecraft:gold",
-            new ResourceLocation("minecraft:gold_ingot"),
-            new ResourceLocation("minecraft:raw_gold"),
-            new ResourceLocation("minecraft:raw_gold_block"),
-            new ResourceLocation("minecraft:gold_nugget"),
-            null, null, null
-        ));
-        
-        defaults.put("minecraft:copper", new MetalProperties(
-            "minecraft:copper",
-            new ResourceLocation("minecraft:copper_ingot"),
-            new ResourceLocation("minecraft:raw_copper"),
-            new ResourceLocation("minecraft:raw_copper_block"),
-            new ResourceLocation("minecraft:copper_nugget"),
-            null, null, null
-        ));
-        
-        // Add Create's zinc if the mod is loaded
-        if (net.minecraftforge.fml.ModList.get().isLoaded("create")) {
-            defaults.put("create:zinc", new MetalProperties(
-                "create:zinc",
-                new ResourceLocation("create:zinc_ingot"),
-                new ResourceLocation("create:raw_zinc"),
-                new ResourceLocation("create:raw_zinc_block"),
-                new ResourceLocation("create:zinc_nugget"),
+                "minecraft:iron",
+                new ResourceLocation("minecraft:iron_ingot"),
+                new ResourceLocation("minecraft:raw_iron"),
+                new ResourceLocation("minecraft:raw_iron_block"),
+                new ResourceLocation("minecraft:iron_nugget"),
                 null, null, null
-            ));
-        }
-        
+        ));
+
+        defaults.put("minecraft:gold", new MetalProperties(
+                "minecraft:gold",
+                new ResourceLocation("minecraft:gold_ingot"),
+                new ResourceLocation("minecraft:raw_gold"),
+                new ResourceLocation("minecraft:raw_gold_block"),
+                new ResourceLocation("minecraft:gold_nugget"),
+                null, null, null
+        ));
+
+        defaults.put("minecraft:copper", new MetalProperties(
+                "minecraft:copper",
+                new ResourceLocation("minecraft:copper_ingot"),
+                new ResourceLocation("minecraft:raw_copper"),
+                new ResourceLocation("minecraft:raw_copper_block"),
+                null, null, null, null
+        ));
+
         return defaults;
     }
 
@@ -115,14 +102,8 @@ public class ModMetals {
                                 if (ForgeRegistries.ITEMS.containsKey(ingotId) &&
                                         ForgeRegistries.ITEMS.containsKey(rawId) &&
                                         ForgeRegistries.ITEMS.containsKey(rawBlockId)) {
-
-                                    // Check for nugget in the mod's namespace
-                                    ResourceLocation nuggetId = new ResourceLocation(namespace, metalName + "_nugget");
-                                    if (!ForgeRegistries.ITEMS.containsKey(nuggetId)) {
-                                        nuggetId = null;
-                                    }
-
                                     // Find items in any namespace
+                                    ResourceLocation nuggetId = findItemInAnyNamespace(metalName + "_nugget");
                                     ResourceLocation crushedId = findItemInAnyNamespace("crushed_raw_" + metalName);
                                     ResourceLocation bucketId = findItemInAnyNamespace("molten_" + metalName + "_bucket");
                                     // Check for molten fluid in any namespace
@@ -130,14 +111,14 @@ public class ModMetals {
 
                                     // Create the metal properties with the new IDs
                                     MetalProperties properties = new MetalProperties(
-                                        metalId,
-                                        ingotId,
-                                        rawId,
-                                        rawBlockId,
-                                        nuggetId,
-                                        crushedId,
-                                        bucketId,
-                                        moltenId
+                                            metalId,
+                                            ingotId,
+                                            rawId,
+                                            rawBlockId,
+                                            nuggetId,
+                                            crushedId,
+                                            bucketId,
+                                            moltenId
                                     );
 
                                     METAL_PROPERTIES_MAP.put(metalId, properties);
@@ -196,6 +177,7 @@ public class ModMetals {
 
     /**
      * Finds a resource location for an item with the given path in any namespace.
+     *
      * @param path The path of the item to find (e.g., "molten_iron_bucket")
      * @return The first matching ResourceLocation found, or null if not found
      */
@@ -206,9 +188,10 @@ public class ModMetals {
                 .findFirst()
                 .orElse(null);
     }
-    
+
     /**
      * Finds a resource location for a fluid with the given path in any namespace.
+     *
      * @param path The path of the fluid to find (e.g., "molten_iron")
      * @return The first matching ResourceLocation found, or null if not found
      */
@@ -219,7 +202,7 @@ public class ModMetals {
                 .findFirst()
                 .orElse(null);
     }
-    
+
     public static String getMetalId(ResourceLocation ingotId) {
         return METAL_PROPERTIES_MAP.entrySet().stream()
                 .filter(entry -> entry.getValue().ingotId().equals(ingotId))

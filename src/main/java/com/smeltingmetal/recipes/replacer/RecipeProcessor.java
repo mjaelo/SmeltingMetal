@@ -115,6 +115,9 @@ public class RecipeProcessor {
             // get result and input
             boolean useCrushed = ModList.get().isLoaded("create") && metalProps.crushedId() != null;
             ResourceLocation nuggetGroupLoc = useCrushed ? metalProps.crushedId() : metalProps.rawId();
+            if (metalProps.nuggetId() == null || nuggetGroupLoc == null) {
+                continue;
+            }
             Item nuggetGroup = ForgeRegistries.ITEMS.getValue(nuggetGroupLoc);
             Item nuggetItem = ForgeRegistries.ITEMS.getValue(metalProps.nuggetId());
 
