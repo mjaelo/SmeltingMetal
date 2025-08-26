@@ -74,7 +74,7 @@ dependencies {
     implementation("io.github.llamalad7:mixinextras-forge:0.4.1")
 
     // Optional compatible mods
-//    implementation fg.deobf("curse.maven:jei-238222:6600311")
+    implementation fg.deobf("curse.maven:jei-238222:6600311")
 //    implementation fg.deobf("curse.maven:create-metalwork-966104:6302297")
 //    implementation fg.deobf("curse.maven:quark-243121:6427817")
 //    implementation fg.deobf("curse.maven:zeta-968868:6432578")

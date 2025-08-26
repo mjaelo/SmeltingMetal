@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": {
+    "item": "smeltingmetal:block_mold_clay"
+  },
+  "result": "smeltingmetal:block_mold_hardened",
+  "experience": 0.1,
+  "cookingtime": 200
+}

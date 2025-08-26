@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "smeltingmetal:item/item_mold_netherite_filled"
+  }
+}

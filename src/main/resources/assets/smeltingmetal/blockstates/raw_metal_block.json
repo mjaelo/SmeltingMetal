@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "smeltingmetal:block/raw_metal_block" }
+  }
+}

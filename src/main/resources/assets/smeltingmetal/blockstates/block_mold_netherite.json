@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "filled=false": {
+      "model": "smeltingmetal:block/block_mold_netherite"
+    },
+    "filled=true": {
+      "model": "smeltingmetal:block/block_mold_netherite_filled"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "filled=false": {
+      "model": "smeltingmetal:block/block_mold_hardened"
+    },
+    "filled=true": {
+      "model": "smeltingmetal:block/block_mold_hardened_filled"
+    }
+  }
+}

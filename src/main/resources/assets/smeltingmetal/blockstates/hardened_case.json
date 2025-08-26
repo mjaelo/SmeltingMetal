@@ -1,6 +1,0 @@
-{
-  "variants": {
-    "fill=0": { "model": "smeltingmetal:block/hardened_case" },
-    "fill=1": { "model": "smeltingmetal:block/hardened_case_full" }
-  }
-}

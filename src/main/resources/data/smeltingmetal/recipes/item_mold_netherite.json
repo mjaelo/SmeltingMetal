@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    "C C",
+    "GGG"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:netherite_scrap"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    }
+  },
+  "result": {
+    "item": "smeltingmetal:item_mold_netherite",
+    "count": 4
+  }
+}

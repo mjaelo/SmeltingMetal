@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "smeltingmetal:block/molten_metal_block" }
+  }
+}
