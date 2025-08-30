@@ -5,11 +5,13 @@ import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.init.ModMetals;
 import com.smeltingmetal.items.ServerEventsUtils;
+import com.smeltingmetal.items.mold.ItemMold;
 import com.smeltingmetal.recipes.RecipeProcessor;
 import com.smeltingmetal.recipes.RecipeReloadListener;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -29,12 +31,19 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = SmeltingMetalMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModEvents {
 
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    // Track the last time a mold transfer was performed (tick time)
+    private static final Map<UUID, Long> lastTransferTimes = new HashMap<>();
+    private static final int TRANSFER_COOLDOWN = 5; // 5 ticks cooldown
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
@@ -88,6 +97,50 @@ public class ModEvents {
                 ServerEventsUtils.fillContainer(metalProps, player, containerStacks.get(0));
                 itemEntity.discard(); // remove ground item
             }
+            event.setCanceled(true);
+        }
+        
+        @SubscribeEvent
+        public static void onRightClickWithMolds(PlayerInteractEvent.RightClickItem event) {
+            if (event.getLevel().isClientSide()) return;
+            
+            Player player = event.getEntity();
+            long currentTick = player.level().getGameTime();
+
+            // Check cooldown to prevent multiple triggers
+            Long lastTransfer = lastTransferTimes.get(player.getUUID());
+            if (lastTransfer != null && currentTick - lastTransfer < TRANSFER_COOLDOWN) {
+                return;
+            }
+            
+            ItemStack mainHand = player.getMainHandItem();
+            ItemStack offHand = player.getOffhandItem();
+
+            // Check if both items are molds
+            if (!(mainHand.getItem() instanceof ItemMold && offHand.getItem() instanceof ItemMold)) {
+                return;
+            }
+
+            String mainHandMetal = ModMetals.getMetalTypeFromStack(mainHand);
+            String offHandMetal = ModMetals.getMetalTypeFromStack(offHand);
+            boolean isMainHandMoldEmpty = mainHandMetal.equals(ModMetals.DEFAULT_METAL_TYPE);
+            boolean isOffHandMoldEmpty = offHandMetal.equals(ModMetals.DEFAULT_METAL_TYPE);
+
+            // Only proceed if one is empty and the other is not
+            if (isMainHandMoldEmpty == isOffHandMoldEmpty) return;
+
+            // Update the metal types
+            ModMetals.setMetalTypeToStack(mainHand, offHandMetal);
+            ModMetals.setMetalTypeToStack(offHand, mainHandMetal);
+
+            // Update the player's hands
+            player.setItemInHand(InteractionHand.MAIN_HAND, mainHand.copy());
+            player.setItemInHand(InteractionHand.OFF_HAND, offHand.copy());
+            
+            // Update the cooldown
+            lastTransferTimes.put(player.getUUID(), currentTick);
+            
+            // Cancel the event to prevent any other interactions
             event.setCanceled(true);
         }
 
