@@ -14,8 +14,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param nugget The ResourceLocation of the corresponding nugget item (e.g., "minecraft:iron_nugget")
  * @param crushed The ResourceLocation of the corresponding crushed item (e.g., "create:crushed_raw_iron")
  * @param bucket The ResourceLocation of the corresponding bucket item (e.g., "smeltingmetal:iron_bucket")
- * @param moltenItem The ResourceLocation of the corresponding molten item
- * @param moltenBlock The ResourceLocation of the corresponding liquid/fluid
+ * @param moltenFluid The ResourceLocation of the corresponding liquid/fluid
  */
 public record MetalProperties(
     String name,
@@ -26,7 +25,6 @@ public record MetalProperties(
     ResourceLocation nugget,
     ResourceLocation crushed,
     ResourceLocation bucket,
-    ResourceLocation moltenItem,
-    ResourceLocation moltenBlock
+    ResourceLocation moltenFluid
 ) {
 }

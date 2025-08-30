@@ -1,10 +1,10 @@
 package com.smeltingmetal.items.molten;
 
-import com.smeltingmetal.items.generic.MetalBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class MoltenMetalBlock extends MetalBlock {
+public class MoltenMetalBlock extends Block {
     public MoltenMetalBlock(Properties properties) {
         super(properties);
     }

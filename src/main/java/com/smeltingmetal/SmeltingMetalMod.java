@@ -21,8 +21,9 @@ import org.slf4j.LoggerFactory;
  * Main mod class for the Smelting Metal mod.
  * This class initializes all mod components, handles configuration loading,
  * and manages core mod functionality and lifecycle events.
- * TODO make bucket store liquid
- * TODO pour metal from mold to mold
+ * TODO pour metal from one mold to other item mold
+ * TODO add in config custom metal data definition
+ * TODO add functionality to raw metal items
  * TODO add item and block prints
  */
 @Mod(SmeltingMetalMod.MODID)

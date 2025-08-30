@@ -5,12 +5,12 @@ import com.simibubi.create.content.kinetics.crusher.CrushingRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.config.MetalsConfig;
-import com.smeltingmetal.init.ModMetals;
 import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.init.ModBlocks;
+import com.smeltingmetal.init.ModItems;
+import com.smeltingmetal.init.ModMetals;
 import com.smeltingmetal.items.generic.MetalBlockItem;
 import com.smeltingmetal.items.generic.MetalItem;
-import com.smeltingmetal.items.molten.MoltenMetalBlockItem;
-import com.smeltingmetal.items.molten.MoltenMetalItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
@@ -119,17 +119,17 @@ public class RecipeProcessor {
             Item nuggetGroup = ForgeRegistries.ITEMS.getValue(nuggetGroupLoc);
             Item nuggetItem = ForgeRegistries.ITEMS.getValue(metalProps.nugget());
             if (nuggetGroup == null || nuggetItem == null) continue;
-            if (nuggetGroup instanceof MetalItem metalItem){
+            if (nuggetGroup instanceof MetalItem) {
                 ItemStack stack = new ItemStack(nuggetGroup);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (nuggetGroup instanceof MetalBlockItem metalBlockItem) {
+            } else if (nuggetGroup instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetGroup);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
             }
-            if(nuggetItem instanceof MetalItem metalItem){
+            if (nuggetItem instanceof MetalItem) {
                 ItemStack stack = new ItemStack(nuggetItem);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (nuggetItem instanceof MetalBlockItem metalBlockItem) {
+            } else if (nuggetItem instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetItem);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
             }
@@ -174,23 +174,8 @@ public class RecipeProcessor {
             if (metalProps == null) continue;
             Item inputItem = ForgeRegistries.ITEMS.getValue(itemId);
             if (inputItem == null || inputItem == Items.AIR) continue;
-            if (inputItem instanceof MetalItem){
-                ItemStack stack = new ItemStack(inputItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (inputItem instanceof MetalBlockItem metalBlockItem) {
-                ItemStack stack = new ItemStack(inputItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            }
-
             Item resultItem = ForgeRegistries.ITEMS.getValue(metalProps.crushed());
             if (resultItem == null || resultItem == Items.AIR) continue;
-            if (resultItem instanceof MetalItem metalItem){
-                ItemStack stack = new ItemStack(resultItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (resultItem instanceof MetalBlockItem metalBlockItem) {
-                ItemStack stack = new ItemStack(resultItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            }
             boolean isBlock = isItemBlock(itemId);
             ItemStack resultStack = new ItemStack(resultItem, isBlock ? 9 : 1);
             if (resultStack.isEmpty()) continue;
@@ -220,42 +205,29 @@ public class RecipeProcessor {
 
     private static void addNewMetalMeltingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            // get input item data
             String metalKey = RecipeUtils.getMetalKeyFromItem(itemId);
             if (metalKey == null) continue;
             MetalProperties metalProps = ModMetals.getMetalProperties(metalKey);
             if (metalProps == null) continue;
-
-            // create result stack
             boolean isBlock = isItemBlock(itemId);
-            Item resultItem = isBlock ? 
-                ForgeRegistries.ITEMS.getValue(metalProps.moltenBlock()) : 
-                ForgeRegistries.ITEMS.getValue(metalProps.moltenItem());
-                
-            if (resultItem == null || resultItem == Items.AIR) continue;
-            
-            // Create the result stack and set the metal type in its NBT
-            ItemStack resultStack = new ItemStack(resultItem);
-            if (resultItem instanceof MoltenMetalBlockItem || resultItem instanceof MoltenMetalItem) {
-                ModMetals.setMetalTypeToStack(resultStack, metalProps.name());
-            }
 
+            // Create an input item
             Item inputItem = ForgeRegistries.ITEMS.getValue(itemId);
             if (inputItem == null || inputItem == Items.AIR) continue;
-            
-            // Create an input stack and set its metal type in NBT if it's a MetalItem or MetalBlockItem
-            ItemStack inputStack = new ItemStack(inputItem);
-            if (inputItem instanceof MetalItem metalItem) {
-                ModMetals.setMetalTypeToStack(inputStack, metalProps.name());
-            } else if (inputItem instanceof MetalBlockItem metalBlockItem) {
-                ModMetals.setMetalTypeToStack(inputStack, metalProps.name());
-            }
+//            ItemStack inputStack = new ItemStack(inputItem);
+//            if (inputItem instanceof MetalItem || inputItem instanceof MetalBlockItem) {
+//                ModMetals.setMetalTypeToStack(inputStack, metalProps.name());
+//            }
+
+            // Create result stack
+            Item resultItem = isBlock ? ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get() : ModItems.MOLTEN_METAL_ITEM.get();
+            ItemStack resultStack = new ItemStack(resultItem);
+            ModMetals.setMetalTypeToStack(resultStack, metalProps.name());
 
             int time = isBlock ? 400 : 200;
             float xp = isBlock ? 1.4f : 0.7f;
             createAndAddCookingRecipe(recipeManager, inputItem, resultStack, RecipeType.SMELTING, time, xp);
             createAndAddCookingRecipe(recipeManager, inputItem, resultStack, RecipeType.BLASTING, time / 2, xp);
-
         }
     }
 

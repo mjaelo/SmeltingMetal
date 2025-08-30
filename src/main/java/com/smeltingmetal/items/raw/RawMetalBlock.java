@@ -1,9 +1,9 @@
 package com.smeltingmetal.items.raw;
 
-import com.smeltingmetal.items.generic.MetalBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
-public class RawMetalBlock extends MetalBlock {
+public class RawMetalBlock extends Block {
     public RawMetalBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }

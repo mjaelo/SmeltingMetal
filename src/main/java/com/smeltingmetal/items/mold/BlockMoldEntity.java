@@ -2,16 +2,16 @@ package com.smeltingmetal.items.mold;
 
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.init.ModBlockEntities;
-import com.smeltingmetal.items.generic.MetalBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class BlockMoldEntity extends MetalBlockEntity {
+public class BlockMoldEntity extends BlockEntity {
     private final String resultType = "block";
     private String metalType = "";
     private boolean isFilled = false;

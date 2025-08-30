@@ -29,6 +29,7 @@ public class ModMetals {
 
     public static final String METAL_TYPE_KEY = "MetalType";
     public static final String DEFAULT_METAL_TYPE = "Metal";
+    public static final String FILLED = "smeltingmetal:filled";
 
     public static void init() {
         if (initialized) {
@@ -73,17 +74,14 @@ public class ModMetals {
         ResourceLocation rawBlock = findOrUseDefaultBlock("raw_" + metalName + "_block", ModBlocks.RAW_METAL_BLOCK.getId());
         ResourceLocation nugget = findOrUseDefaultItem(metalName + "_nugget", ModItems.METAL_NUGGET.getId());
         ResourceLocation crushed = findOrUseDefaultItem("crushed_raw_" + metalName, ModItems.RAW_METAL_ITEM.getId()); // Fallback for Create compat
-        ResourceLocation bucket = findOrUseDefaultItem(metalName + "_bucket", ModItems.MOLTEN_METAL_BUCKET.getId());
-        ResourceLocation moltenItem = findOrUseDefaultItem("molten_" + metalName, ModItems.MOLTEN_METAL_ITEM.getId());
-        // TODO should be a liquid not a block
-        ResourceLocation moltenBlock = findOrUseDefaultBlock("molten_" + metalName + "_block", ModBlocks.MOLTEN_METAL_BLOCK.getId());
+        ResourceLocation bucket = findOrUseDefaultItem("molten_" + metalName + "_bucket", ModItems.MOLTEN_METAL_BUCKET.getId());
+        ResourceLocation moltenFluid = findFluid("molten_" + metalName);
 
-        MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget, crushed, bucket, moltenItem, moltenBlock);
+        MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget, crushed, bucket, moltenFluid);
         METAL_PROPERTIES_MAP.put(metalName, properties);
         LOGGER.info("Created MetalProperties for metal: {}", metalName);
     }
 
-    @Nullable
     private static ResourceLocation findItem(String suffix) {
         return ForgeRegistries.ITEMS.getValues().stream()
                 .map(ForgeRegistries.ITEMS::getKey)
@@ -93,10 +91,18 @@ public class ModMetals {
                 .orElse(null);
     }
 
-    @Nullable
     private static ResourceLocation findBlock(String suffix) {
         return ForgeRegistries.BLOCKS.getValues().stream()
                 .map(ForgeRegistries.BLOCKS::getKey)
+                .filter(Objects::nonNull)
+                .filter(key -> key.getPath().equals(suffix))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static ResourceLocation findFluid(String suffix) {
+        return ForgeRegistries.FLUIDS.getValues().stream()
+                .map(ForgeRegistries.FLUIDS::getKey)
                 .filter(Objects::nonNull)
                 .filter(key -> key.getPath().equals(suffix))
                 .findFirst()
@@ -146,11 +152,14 @@ public class ModMetals {
         if (!(item instanceof MetalItem || item instanceof MetalBlockItem)) return;
         boolean isDefaultMetal = Objects.equals(metalType, DEFAULT_METAL_TYPE);
 
-        if (isDefaultMetal || doesMetalExist(metalType)) {
+        if (isDefaultMetal) {
+            stack.removeTagKey(METAL_TYPE_KEY);
+            stack.removeTagKey(FILLED);
+        } else if (doesMetalExist(metalType)) {
             CompoundTag tag = stack.getOrCreateTag();
             tag.putString(METAL_TYPE_KEY, metalType);
             if (item instanceof ItemMold) {
-                tag.putInt("smeltingmetal:filled", isDefaultMetal ? 0 : 1);
+                tag.putInt(FILLED, 1);
             }
         } else {
             SmeltingMetalMod.LOGGER.error("Invalid metal type: " + metalType);
