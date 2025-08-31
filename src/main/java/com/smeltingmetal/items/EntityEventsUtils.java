@@ -4,6 +4,7 @@ import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.init.ModMetals;
 import com.smeltingmetal.items.mold.BlockMoldEntity;
+import com.smeltingmetal.items.mold.ItemMold;
 import com.smeltingmetal.items.molten.MoltenMetalBucket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
@@ -33,7 +34,7 @@ public class EntityEventsUtils {
         if (cooledStack == null || cooledStack.isEmpty()) return false;
 
         // Drop the cooled item
-        if (!containerStack.isEmpty()) {
+        if (containerStack.getItem() instanceof ItemMold && !containerStack.isEmpty()) {
             ItemEntity itemEntity = new ItemEntity(level,
                     pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
                     containerStack);

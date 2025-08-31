@@ -73,10 +73,7 @@ public class RecipeUtils {
         throw new NoSuchFieldException("Could not find 'byName' field in RecipeManager.");
     }
 
-    public static String getMetalKeyFromItem(ResourceLocation itemId) {
-        if (itemId == null) return null;
-        String path = itemId.getPath();
-
+    public static String getMetalKeyFromString(String path) {
         String pathLower = path.toLowerCase();
         for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
             if (pathLower.contains(bad)) return null;

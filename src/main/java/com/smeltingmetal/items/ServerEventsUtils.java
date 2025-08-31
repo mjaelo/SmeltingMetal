@@ -105,10 +105,10 @@ public class ServerEventsUtils {
         if (!shouldCool && !inWater) return null;
 
         boolean isValidMold = metalStack.getItem() instanceof ItemMold moldItem
-                && !Objects.equals(ModMetals.getMetalTypeFromStack(metalStack), ModMetals.DEFAULT_METAL_TYPE)
+                && !Objects.equals(ModMetals.getMetalPropertiesFromStack(metalStack), ModMetals.DEFAULT_METAL_TYPE)
                 && moldItem.getMaterialType() != MaterialType.CLAY;
         boolean isValidMoltenMetal = (metalStack.getItem() instanceof MoltenMetalItem || metalStack.getItem() instanceof MoltenMetalBlockItem)
-                && !Objects.equals(ModMetals.getMetalTypeFromStack(metalStack), ModMetals.DEFAULT_METAL_TYPE);
+                && !Objects.equals(ModMetals.getMetalPropertiesFromStack(metalStack), ModMetals.DEFAULT_METAL_TYPE);
         if (!isValidMold && !isValidMoltenMetal) return null;
 
         MetalProperties metalProps = ModMetals.getMetalPropertiesFromStack(metalStack);

@@ -90,8 +90,11 @@ public class RecipeProcessor {
             addNuggetCraftingRecipes(recipeManager);
         }
 
+//        addRawCraftingRecipes(recipeManager); // TODO doesnt transfer metal type
+
         recipesToRemove.forEach(recipe -> RecipeUtils.removeRecipeInManager(recipeManager, recipe.getId()));
     }
+
 
     private static boolean doAllIngriedientsMatchPattern(ShapedRecipe shaped, String pattern) {
         return shaped.getIngredients().stream().allMatch(ing ->
@@ -119,56 +122,83 @@ public class RecipeProcessor {
             Item nuggetGroup = ForgeRegistries.ITEMS.getValue(nuggetGroupLoc);
             Item nuggetItem = ForgeRegistries.ITEMS.getValue(metalProps.nugget());
             if (nuggetGroup == null || nuggetItem == null) continue;
-            if (nuggetGroup instanceof MetalItem) {
-                ItemStack stack = new ItemStack(nuggetGroup);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (nuggetGroup instanceof MetalBlockItem) {
+            if (nuggetGroup instanceof MetalItem || nuggetGroup instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetGroup);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
             }
-            if (nuggetItem instanceof MetalItem) {
-                ItemStack stack = new ItemStack(nuggetItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
-            } else if (nuggetItem instanceof MetalBlockItem) {
+            if (nuggetItem instanceof MetalItem || nuggetItem instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetItem);
                 ModMetals.setMetalTypeToStack(stack, metalProps.name());
             }
 
             // create shapeless recipe
-            String shapelessRecipeIdSuffix = "nuggets_from_" + nuggetGroupLoc.getPath();
-            ResourceLocation shapelessRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapelessRecipeIdSuffix);
-            ShapelessRecipe shapelessRecipe = new ShapelessRecipe(
-                    shapelessRecipeId,
-                    "",
-                    CraftingBookCategory.MISC,
-                    new ItemStack(nuggetItem, 9),
-                    NonNullList.of(Ingredient.EMPTY, Ingredient.of(nuggetGroup))
-            );
-            RecipeUtils.createInRecipeInManager(recipeManager, shapelessRecipeId, shapelessRecipe);
+            create9ItemsFrom1(recipeManager, nuggetItem, nuggetGroup, nuggetGroupLoc.getPath(), metalProps.nugget().getPath());
 
             // create shaped recipe
-            String shapedRecipeIdSuffix = nuggetGroupLoc.getPath() + "_from_nuggets";
-            ResourceLocation shapedRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapedRecipeIdSuffix);
-            NonNullList<Ingredient> nuggetIngs = NonNullList.withSize(9, Ingredient.EMPTY);
-            for (int i = 0; i < 9; i++) {
-                nuggetIngs.set(i, Ingredient.of(nuggetItem));
-            }
-            ShapedRecipe shapedRecipe = new ShapedRecipe(
-                    shapedRecipeId,
-                    "",
-                    CraftingBookCategory.MISC,
-                    3, 3,
-                    nuggetIngs,
-                    new ItemStack(nuggetGroup, 1)
-            );
-            RecipeUtils.createInRecipeInManager(recipeManager, shapedRecipeId, shapedRecipe);
+            create1ItemFrom9(recipeManager, nuggetItem, nuggetGroup, nuggetGroupLoc.getPath(), metalProps.nugget().getPath());
         }
+    }
+
+    private static void create1ItemFrom9(RecipeManager recipeManager, Item singleItem, Item groupItem, String singleName, String groupName) {
+        String shapedRecipeIdSuffix = groupName + "_from_" + singleName;
+        ResourceLocation shapedRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapedRecipeIdSuffix);
+        NonNullList<Ingredient> nuggetIngs = NonNullList.withSize(9, Ingredient.EMPTY);
+        for (int i = 0; i < 9; i++) {
+            nuggetIngs.set(i, Ingredient.of(singleItem));
+        }
+
+        String metalName = RecipeUtils.getMetalKeyFromString(singleItem.toString());
+        ItemStack groupStack = new ItemStack(groupItem, 1);
+        if (metalName != null && (groupItem instanceof MetalItem || groupItem instanceof MetalBlockItem)) {
+            ModMetals.setMetalTypeToStack(groupStack, metalName);
+        }
+
+        ShapedRecipe shapedRecipe = new ShapedRecipe(
+                shapedRecipeId,
+                "",
+                CraftingBookCategory.MISC,
+                3, 3,
+                nuggetIngs,
+                groupStack
+        );
+        RecipeUtils.createInRecipeInManager(recipeManager, shapedRecipeId, shapedRecipe);
+    }
+
+    private static void create9ItemsFrom1(RecipeManager recipeManager, Item singleItem, Item groupItem, String singleName, String groupName) {
+        String shapelessRecipeIdSuffix = singleName + "_from_" + groupName;
+        ResourceLocation shapelessRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapelessRecipeIdSuffix);
+
+        String metalName = RecipeUtils.getMetalKeyFromString(groupItem.toString());
+        ItemStack singleStack = new ItemStack(singleItem, 9);
+        if (metalName != null && (singleItem instanceof MetalItem || singleItem instanceof MetalBlockItem)) {
+            ModMetals.setMetalTypeToStack(singleStack, metalName);
+        }
+
+        ShapelessRecipe shapelessRecipe = new ShapelessRecipe(
+                shapelessRecipeId,
+                "",
+                CraftingBookCategory.MISC,
+                singleStack,
+                NonNullList.of(Ingredient.EMPTY, Ingredient.of(groupItem))
+        );
+        RecipeUtils.createInRecipeInManager(recipeManager, shapelessRecipeId, shapelessRecipe);
+    }
+
+    private static void addRawCraftingRecipes(RecipeManager recipeManager) {
+
+        Item rawItem = ModItems.RAW_METAL_ITEM.get();
+        Item rawBlock = ModBlocks.RAW_METAL_BLOCK_ITEM.get();
+        Item nugget = ModItems.METAL_NUGGET.get();
+
+        create1ItemFrom9(recipeManager, rawItem, rawBlock, "raw_metal", "raw_metal_block");
+        create9ItemsFrom1(recipeManager, rawItem, rawBlock, "raw_metal", "raw_metal_block");
+        create1ItemFrom9(recipeManager, nugget, rawItem, "nugget", "raw_metal");
+        create9ItemsFrom1(recipeManager, nugget, rawItem, "nugget", "raw_metal");
     }
 
     private static void addNewCrushingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = RecipeUtils.getMetalKeyFromItem(itemId);
-
+            String metalKey = RecipeUtils.getMetalKeyFromString(itemId.getPath());
             if (metalKey == null) continue;
             MetalProperties metalProps = ModMetals.getMetalProperties(metalKey);
             if (metalProps == null) continue;
@@ -205,19 +235,15 @@ public class RecipeProcessor {
 
     private static void addNewMetalMeltingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = RecipeUtils.getMetalKeyFromItem(itemId);
+            String metalKey = RecipeUtils.getMetalKeyFromString(itemId.getPath());
             if (metalKey == null) continue;
             MetalProperties metalProps = ModMetals.getMetalProperties(metalKey);
             if (metalProps == null) continue;
-            boolean isBlock = isItemBlock(itemId);
+            boolean isBlock = metalProps.ingot() == null || (metalProps.block() != null && isItemBlock(itemId));
 
             // Create an input item
             Item inputItem = ForgeRegistries.ITEMS.getValue(itemId);
             if (inputItem == null || inputItem == Items.AIR) continue;
-//            ItemStack inputStack = new ItemStack(inputItem);
-//            if (inputItem instanceof MetalItem || inputItem instanceof MetalBlockItem) {
-//                ModMetals.setMetalTypeToStack(inputStack, metalProps.name());
-//            }
 
             // Create result stack
             Item resultItem = isBlock ? ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get() : ModItems.MOLTEN_METAL_ITEM.get();

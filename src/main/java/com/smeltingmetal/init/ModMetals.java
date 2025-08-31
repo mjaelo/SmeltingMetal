@@ -60,22 +60,58 @@ public class ModMetals {
         initialized = true;
     }
 
-    private static void parseMetalProperties(String metalName) {
-        ResourceLocation ingot = findItem(metalName + "_ingot");
-        ResourceLocation block = findItem(metalName + "_block");
+    private static void parseMetalProperties(String metalDef) {
+        // Parse the metal definition string
+        String[] parts = metalDef.split(",");
+        String metalName = parts[0].trim();
 
-        if (ingot == null || block == null) {
-            LOGGER.error("Missing ingot or block for metal '{}'. Failed to create MetalProperties.", metalName);
+        // Default values
+        String ingotPath = metalName + "_ingot";
+        String blockPath = metalName + "_block";
+        String rawPath = "raw_" + metalName;
+        String rawBlockPath = "raw_" + metalName + "_block";
+        String nuggetPath = metalName + "_nugget";
+        String crushedPath = "crushed_raw_" + metalName;
+        String bucketPath = "molten_" + metalName + "_bucket";
+        String moltenFluidPath = "molten_" + metalName;
+
+        // Parse custom paths if provided
+        for (int i = 1; i < parts.length; i++) {
+            String[] keyValue = parts[i].split("=", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                switch (key) {
+                    case "ingot" -> ingotPath = value;
+                    case "block" -> blockPath = value;
+                    case "raw" -> rawPath = value;
+                    case "raw_block" -> rawBlockPath = value;
+                    case "nugget" -> nuggetPath = value;
+                    case "crushed" -> crushedPath = value;
+                    case "bucket" -> bucketPath = value;
+                    case "molten_fluid" -> moltenFluidPath = value;
+                    default -> LOGGER.warn("Unknown property '{}' for metal '{}'", key, metalName);
+                }
+            }
+        }
+
+        // Find the actual resources
+        ResourceLocation ingot = findItem(ingotPath);
+        ResourceLocation block = findBlock(blockPath);
+
+        if (ingot == null && block == null) {
+            LOGGER.error("Missing required items for metal '{}'. Failed to create MetalProperties. (ingot: {}, block: {})",
+                    metalName, ingotPath, blockPath);
             return;
         }
 
         // Find optional items or use default fallbacks
-        ResourceLocation raw = findOrUseDefaultItem("raw_" + metalName, ModItems.RAW_METAL_ITEM.getId());
-        ResourceLocation rawBlock = findOrUseDefaultBlock("raw_" + metalName + "_block", ModBlocks.RAW_METAL_BLOCK.getId());
-        ResourceLocation nugget = findOrUseDefaultItem(metalName + "_nugget", ModItems.METAL_NUGGET.getId());
-        ResourceLocation crushed = findOrUseDefaultItem("crushed_raw_" + metalName, ModItems.RAW_METAL_ITEM.getId()); // Fallback for Create compat
-        ResourceLocation bucket = findOrUseDefaultItem("molten_" + metalName + "_bucket", ModItems.MOLTEN_METAL_BUCKET.getId());
-        ResourceLocation moltenFluid = findFluid("molten_" + metalName);
+        ResourceLocation raw = ingot == null ? null : findOrUseDefaultItem(rawPath, ModItems.RAW_METAL_ITEM.getId());
+        ResourceLocation rawBlock = block == null ? null : findOrUseDefaultBlock(rawBlockPath, ModBlocks.RAW_METAL_BLOCK.getId());
+        ResourceLocation nugget = ingot == null ? null : findOrUseDefaultItem(nuggetPath, ModItems.METAL_NUGGET.getId());
+        ResourceLocation crushed = ingot == null ? null : findOrUseDefaultItem(crushedPath, ModItems.RAW_METAL_ITEM.getId()); // Fallback for Create compat
+        ResourceLocation bucket = block == null ? null : findOrUseDefaultItem(bucketPath, ModItems.MOLTEN_METAL_BUCKET.getId());
+        ResourceLocation moltenFluid = block == null ? null : findFluid(moltenFluidPath);
 
         MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget, crushed, bucket, moltenFluid);
         METAL_PROPERTIES_MAP.put(metalName, properties);
