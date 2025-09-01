@@ -1,10 +1,14 @@
 {
   "variants": {
-    "filled=false": {
-      "model": "smeltingmetal:block/block_mold_netherite"
-    },
-    "filled=true": {
-      "model": "smeltingmetal:block/block_mold_netherite_filled"
-    }
+    "has_metal=false,shape=0": { "model": "smeltingmetal:block/block_mold/netherite_block" },
+    "has_metal=false,shape=1": { "model": "smeltingmetal:block/block_mold/netherite_helmet" },
+    "has_metal=false,shape=2": { "model": "smeltingmetal:block/block_mold/netherite_armor" },
+    "has_metal=false,shape=3": { "model": "smeltingmetal:block/block_mold/netherite_pants" },
+    "has_metal=false,shape=4": { "model": "smeltingmetal:block/block_mold/netherite_boots" },
+    "has_metal=true,shape=0": { "model": "smeltingmetal:block/block_mold/netherite_filled" },
+    "has_metal=true,shape=1": { "model": "smeltingmetal:block/block_mold/netherite_helmet_filled" },
+    "has_metal=true,shape=2": { "model": "smeltingmetal:block/block_mold/netherite_armor_filled" },
+    "has_metal=true,shape=3": { "model": "smeltingmetal:block/block_mold/netherite_pants_filled" },
+    "has_metal=true,shape=4": { "model": "smeltingmetal:block/block_mold/netherite_boots_filled" }
   }
 }

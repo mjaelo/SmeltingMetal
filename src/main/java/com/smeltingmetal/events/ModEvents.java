@@ -4,14 +4,13 @@ import com.mojang.logging.LogUtils;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.init.ModMetals;
-import com.smeltingmetal.items.ServerEventsUtils;
-import com.smeltingmetal.items.mold.ItemMold;
 import com.smeltingmetal.recipes.RecipeProcessor;
 import com.smeltingmetal.recipes.RecipeReloadListener;
+import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ServerEventsUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -88,8 +87,8 @@ public class ModEvents {
             if (containerClass == null) return; // not molten item
 
             List<ItemStack> containerStacks = ServerEventsUtils.findInInventory(player, containerClass);
-            String metalType = ModMetals.getMetalTypeFromStack(itemStack);
-            MetalProperties metalProps = ModMetals.getMetalProperties(metalType);
+            String metalType = MetalUtils.getMetalTypeFromStack(itemStack);
+            MetalProperties metalProps = MetalUtils.getMetalProperties(metalType);
 
             if (containerStacks.isEmpty() || metalProps == null) {
                 player.hurt(player.damageSources().lava(), 4f);
@@ -99,11 +98,11 @@ public class ModEvents {
             }
             event.setCanceled(true);
         }
-        
+
         @SubscribeEvent
         public static void onRightClickWithMolds(PlayerInteractEvent.RightClickItem event) {
             if (event.getLevel().isClientSide()) return;
-            
+
             Player player = event.getEntity();
             long currentTick = player.level().getGameTime();
 
@@ -112,34 +111,18 @@ public class ModEvents {
             if (lastTransfer != null && currentTick - lastTransfer < TRANSFER_COOLDOWN) {
                 return;
             }
-            
+
             ItemStack mainHand = player.getMainHandItem();
             ItemStack offHand = player.getOffhandItem();
 
-            // Check if both items are molds
-            if (!(mainHand.getItem() instanceof ItemMold && offHand.getItem() instanceof ItemMold)) {
+            if (!ServerEventsUtils.pourMetalBetweenItemMolds(mainHand, offHand, player)
+                    && !ServerEventsUtils.printItemIntoItemMold(mainHand, offHand, player)
+                    && !ServerEventsUtils.printItemIntoBlockMold(mainHand, offHand, player))
                 return;
-            }
 
-            String mainHandMetal = ModMetals.getMetalTypeFromStack(mainHand);
-            String offHandMetal = ModMetals.getMetalTypeFromStack(offHand);
-            boolean isMainHandMoldEmpty = mainHandMetal.equals(ModMetals.DEFAULT_METAL_TYPE);
-            boolean isOffHandMoldEmpty = offHandMetal.equals(ModMetals.DEFAULT_METAL_TYPE);
-
-            // Only proceed if one is empty and the other is not
-            if (isMainHandMoldEmpty == isOffHandMoldEmpty) return;
-
-            // Update the metal types
-            ModMetals.setMetalTypeToStack(mainHand, offHandMetal);
-            ModMetals.setMetalTypeToStack(offHand, mainHandMetal);
-
-            // Update the player's hands
-            player.setItemInHand(InteractionHand.MAIN_HAND, mainHand.copy());
-            player.setItemInHand(InteractionHand.OFF_HAND, offHand.copy());
-            
             // Update the cooldown
             lastTransferTimes.put(player.getUUID(), currentTick);
-            
+
             // Cancel the event to prevent any other interactions
             event.setCanceled(true);
         }

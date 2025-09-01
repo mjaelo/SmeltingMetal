@@ -1,7 +1,6 @@
 package com.smeltingmetal;
 
 import com.smeltingmetal.config.MetalsConfig;
-import com.smeltingmetal.events.ClientModEvents;
 import com.smeltingmetal.init.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -21,7 +20,13 @@ import org.slf4j.LoggerFactory;
  * Main mod class for the Smelting Metal mod.
  * This class initializes all mod components, handles configuration loading,
  * and manages core mod functionality and lifecycle events.
- * TODO add item and block prints
+ * TODO add colored item overlays for molten metal
+ * TODO add gem processing.
+ *    create gemProperties, similar to MetalProperties, but with different path patterns
+ *      only gem (insted of ingot), block, maybe raw? new dust item and block.
+ *      crush gem into dust which can fill item molds and bucket which can fill block mold
+ *      lava can turn filled molds into gem items
+ *      how to crush gems into dust? (apart from create crushers) new tool?
  */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {
@@ -44,12 +49,9 @@ public class SmeltingMetalMod {
         // Initialize mod components
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);
-        
+
         // Register registries
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-        
-        // Register event listeners for client-side setup
-        modEventBus.addListener(ClientModEvents::onClientSetup);
 
         // Register recipes
         ModRecipes.register(modEventBus);
@@ -86,7 +88,7 @@ public class SmeltingMetalMod {
         SmeltingMetalMod.server = server;
     }
 
-    
+
     private void onConfigReloading(ModConfigEvent.Reloading event) {
         if (event.getConfig().getSpec() == MetalsConfig.CONFIG_SPEC) {
             LOGGER.info("Reloading Smelting Metal config...");

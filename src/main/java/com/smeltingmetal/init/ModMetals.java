@@ -1,20 +1,13 @@
 package com.smeltingmetal.init;
 
 import com.mojang.logging.LogUtils;
-import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.config.MetalsConfig;
 import com.smeltingmetal.data.MetalProperties;
-import com.smeltingmetal.items.generic.MetalBlockItem;
-import com.smeltingmetal.items.generic.MetalItem;
-import com.smeltingmetal.items.mold.ItemMold;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -24,12 +17,18 @@ import java.util.*;
  */
 public class ModMetals {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<String, MetalProperties> METAL_PROPERTIES_MAP = new HashMap<>();
     private static boolean initialized = false;
 
-    public static final String METAL_TYPE_KEY = "MetalType";
-    public static final String DEFAULT_METAL_TYPE = "Metal";
-    public static final String FILLED = "smeltingmetal:filled";
+    private static final Map<String, MetalProperties> METAL_PROPERTIES_MAP = new HashMap<>();
+    private static Map<String, List<String>> ITEM_SHAPE_MAP;
+    private static Map<String, List<String>> BLOCK_SHAPE_MAP;
+    public static final List<String> DEFAULT_ITEM_SHAPES = List.of("ingot", "axe", "pickaxe", "shovel", "sword", "hoe");
+    public static final List<String> DEFAULT_BLOCK_SHAPES = List.of("block", "helmet", "armor", "pants", "boots");
+    public static final String METAL_KEY = "has_metal";
+    public static final String DEFAULT_METAL = "metal";
+    public static final String SHAPE_KEY = "shape";
+    public static final String DEFAULT_ITEM_SHAPE = "ingot";
+    public static final String DEFAULT_BLOCK_SHAPE = "block";
 
     public static void init() {
         if (initialized) {
@@ -39,7 +38,12 @@ public class ModMetals {
         METAL_PROPERTIES_MAP.clear();
 
         try {
-            if (MetalsConfig.CONFIG == null || MetalsConfig.CONFIG.metalDefinitions == null) {
+            if (MetalsConfig.CONFIG == null) {
+                LOGGER.warn("Failed to get MetalsConfig instance.");
+                return;
+            }
+
+            if (MetalsConfig.CONFIG.metalDefinitions == null) {
                 LOGGER.warn("Config not loaded yet, skipping metal initialization.");
                 return;
             }
@@ -49,6 +53,9 @@ public class ModMetals {
             if (metalDefs.isEmpty()) {
                 LOGGER.warn("No metal definitions found in config.");
             } else {
+                ITEM_SHAPE_MAP = processResultDefinitions(MetalsConfig.CONFIG.itemResultDefinitions.get());
+                BLOCK_SHAPE_MAP = processResultDefinitions(MetalsConfig.CONFIG.blockResultDefinitions.get());
+
                 for (String metalName : metalDefs) {
                     parseMetalProperties(metalName.trim());
                 }
@@ -58,6 +65,23 @@ public class ModMetals {
         }
 
         initialized = true;
+    }
+
+    private static Map<String, List<String>> processResultDefinitions(List<? extends String> definitions) {
+        Map<String, List<String>> shapeMap = new HashMap<>();
+        for (String def : definitions) {
+            String[] parts = def.split("=", 2);
+            if (parts.length == 1) {
+                // No synonyms, use the same value as key and only value
+                shapeMap.put(parts[0].trim(), List.of(parts[0].trim()));
+            } else {
+                // Has synonyms, split the values and add to map
+                String key = parts[0].trim();
+                String[] values = parts[1].split(",");
+                shapeMap.put(key, Arrays.stream(values).map(String::trim).toList());
+            }
+        }
+        return shapeMap;
     }
 
     private static void parseMetalProperties(String metalDef) {
@@ -74,6 +98,17 @@ public class ModMetals {
         String crushedPath = "crushed_raw_" + metalName;
         String bucketPath = "molten_" + metalName + "_bucket";
         String moltenFluidPath = "molten_" + metalName;
+
+        // Create maps to store item and block results
+        Map<String, ResourceLocation> itemResults = new HashMap<>();
+        Map<String, ResourceLocation> blockResults = new HashMap<>();
+
+        // Populate item results from ITEM_SHAPE_MAP TODO only item and block are registered for gold
+
+        populateResults(metalName, ITEM_SHAPE_MAP, itemResults);
+
+        // Populate block results from BLOCK_SHAPE_MAP
+        populateResults(metalName, BLOCK_SHAPE_MAP, blockResults);
 
         // Parse custom paths if provided
         for (int i = 1; i < parts.length; i++) {
@@ -96,8 +131,8 @@ public class ModMetals {
         }
 
         // Find the actual resources
-        ResourceLocation ingot = findItem(ingotPath);
-        ResourceLocation block = findBlock(blockPath);
+        ResourceLocation ingot = findInRegistry(ForgeRegistries.ITEMS, ingotPath);
+        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath);
 
         if (ingot == null && block == null) {
             LOGGER.error("Missing required items for metal '{}'. Failed to create MetalProperties. (ingot: {}, block: {})",
@@ -106,47 +141,40 @@ public class ModMetals {
         }
 
         // Find optional items or use default fallbacks
-        ResourceLocation raw = ingot == null ? null : findOrUseDefaultItem(rawPath, ModItems.RAW_METAL_ITEM.getId());
-        ResourceLocation rawBlock = block == null ? null : findOrUseDefaultBlock(rawBlockPath, ModBlocks.RAW_METAL_BLOCK.getId());
-        ResourceLocation nugget = ingot == null ? null : findOrUseDefaultItem(nuggetPath, ModItems.METAL_NUGGET.getId());
-        ResourceLocation crushed = ingot == null ? null : findOrUseDefaultItem(crushedPath, ModItems.RAW_METAL_ITEM.getId()); // Fallback for Create compat
-        ResourceLocation bucket = block == null ? null : findOrUseDefaultItem(bucketPath, ModItems.MOLTEN_METAL_BUCKET.getId());
-        ResourceLocation moltenFluid = block == null ? null : findFluid(moltenFluidPath);
+        ResourceLocation raw = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, rawPath);
+        ResourceLocation rawBlock = block == null ? null : findInRegistry(ForgeRegistries.BLOCKS, rawBlockPath);
+        ResourceLocation nugget = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, nuggetPath);
+        ResourceLocation crushed = ingot == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, crushedPath, raw); // Fallback for Create compat
+        ResourceLocation bucket = block == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, bucketPath, ModItems.MOLTEN_METAL_BUCKET.getId());
+        ResourceLocation moltenFluid = block == null ? null : findInRegistry(ForgeRegistries.FLUIDS, moltenFluidPath);
 
-        MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget, crushed, bucket, moltenFluid);
+        // Create MetalProperties with both item and block results
+        MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget,
+                crushed, bucket, moltenFluid, itemResults, blockResults);
         METAL_PROPERTIES_MAP.put(metalName, properties);
         LOGGER.info("Created MetalProperties for metal: {}", metalName);
     }
 
-    private static ResourceLocation findItem(String suffix) {
-        return ForgeRegistries.ITEMS.getValues().stream()
-                .map(ForgeRegistries.ITEMS::getKey)
+    private static <T> ResourceLocation findInRegistryContaining(IForgeRegistry<T> registry, List<String> keywords) {
+        return registry.getValues().stream()
+                .map(registry::getKey)
+                .filter(Objects::nonNull)
+                .filter(key -> keywords.stream().allMatch(word -> key.getPath().contains(word)))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static <T> ResourceLocation findInRegistry(IForgeRegistry<T> registry, String suffix) {
+        return registry.getValues().stream()
+                .map(registry::getKey)
                 .filter(Objects::nonNull)
                 .filter(key -> key.getPath().equals(suffix))
                 .findFirst()
                 .orElse(null);
     }
 
-    private static ResourceLocation findBlock(String suffix) {
-        return ForgeRegistries.BLOCKS.getValues().stream()
-                .map(ForgeRegistries.BLOCKS::getKey)
-                .filter(Objects::nonNull)
-                .filter(key -> key.getPath().equals(suffix))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private static ResourceLocation findFluid(String suffix) {
-        return ForgeRegistries.FLUIDS.getValues().stream()
-                .map(ForgeRegistries.FLUIDS::getKey)
-                .filter(Objects::nonNull)
-                .filter(key -> key.getPath().equals(suffix))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private static ResourceLocation findOrUseDefaultItem(String suffix, ResourceLocation defaultItem) {
-        ResourceLocation foundItem = findItem(suffix);
+    private static <T> ResourceLocation findInRegistryOrUseDefault(IForgeRegistry<T> registry, String suffix, ResourceLocation defaultItem) {
+        ResourceLocation foundItem = findInRegistry(registry, suffix);
         if (foundItem != null) {
             return foundItem;
         }
@@ -154,57 +182,28 @@ public class ModMetals {
         return defaultItem;
     }
 
-    private static ResourceLocation findOrUseDefaultBlock(String suffix, ResourceLocation defaultBlock) {
-        ResourceLocation foundBlock = findBlock(suffix);
-        if (foundBlock != null) {
-            return foundBlock;
-        }
-
-        return defaultBlock;
+    private static void populateResults(String metalName, Map<String, List<String>> shapeMap, Map<String, ResourceLocation> results) {
+        shapeMap.entrySet().stream()
+                .filter(shapeSet -> !results.containsKey(shapeSet.getKey()))
+                .forEach(shapeSet -> shapeSet.getValue().stream()
+                        .map(shapeValue -> {
+                            ResourceLocation item = findInRegistry(ForgeRegistries.ITEMS, metalName + "_" + shapeValue);
+                            return item != null ? item : findInRegistryContaining(ForgeRegistries.ITEMS, List.of(metalName, "_"+shapeValue));
+                        })
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .ifPresent(loc -> results.put(shapeSet.getKey(), loc)));
     }
 
-    public static Map<String, MetalProperties> getAllMetalProperties() {
-        return Collections.unmodifiableMap(METAL_PROPERTIES_MAP);
+    public static Map<String, List<String>> getItemShapeMap() {
+        return ITEM_SHAPE_MAP;
     }
 
-    @Nullable
-    public static MetalProperties getMetalProperties(String metalId) {
-        return METAL_PROPERTIES_MAP.get(metalId);
+    public static Map<String, List<String>> getBlockShapeMap() {
+        return BLOCK_SHAPE_MAP;
     }
 
-    public static boolean doesMetalExist(String metalId) {
-        return METAL_PROPERTIES_MAP.containsKey(metalId);
+    public static Map<String, MetalProperties> getMetalPropertiesMap() {
+        return METAL_PROPERTIES_MAP;
     }
-
-    public static String getMetalTypeFromStack(ItemStack stack) {
-        if (stack.hasTag() && stack.getTag().contains(METAL_TYPE_KEY)) {
-            return stack.getTag().getString(METAL_TYPE_KEY);
-        }
-        return DEFAULT_METAL_TYPE;
-    }
-
-    public static void setMetalTypeToStack(ItemStack stack, String metalType) {
-        Item item = stack.getItem();
-        if (!(item instanceof MetalItem || item instanceof MetalBlockItem)) return;
-        boolean isDefaultMetal = Objects.equals(metalType, DEFAULT_METAL_TYPE);
-
-        if (isDefaultMetal) {
-            stack.removeTagKey(METAL_TYPE_KEY);
-            stack.removeTagKey(FILLED);
-        } else if (doesMetalExist(metalType)) {
-            CompoundTag tag = stack.getOrCreateTag();
-            tag.putString(METAL_TYPE_KEY, metalType);
-            if (item instanceof ItemMold) {
-                tag.putInt(FILLED, 1);
-            }
-        } else {
-            SmeltingMetalMod.LOGGER.error("Invalid metal type: " + metalType);
-        }
-    }
-
-    public static MetalProperties getMetalPropertiesFromStack(ItemStack stack) {
-        return getMetalProperties(getMetalTypeFromStack(stack));
-    }
-
-
 }

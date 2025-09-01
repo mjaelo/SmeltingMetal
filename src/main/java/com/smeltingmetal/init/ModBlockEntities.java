@@ -1,7 +1,7 @@
 package com.smeltingmetal.init;
 
 import com.smeltingmetal.SmeltingMetalMod;
-import com.smeltingmetal.items.mold.BlockMoldEntity;
+import com.smeltingmetal.objects.mold.BlockMoldEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;

@@ -5,12 +5,16 @@ import com.simibubi.create.content.kinetics.crusher.CrushingRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.init.ModBlocks;
 import com.smeltingmetal.init.ModItems;
 import com.smeltingmetal.init.ModMetals;
-import com.smeltingmetal.items.generic.MetalBlockItem;
-import com.smeltingmetal.items.generic.MetalItem;
+import com.smeltingmetal.objects.generic.MetalBlockItem;
+import com.smeltingmetal.objects.generic.MetalItem;
+import com.smeltingmetal.objects.mold.BlockMoldItem;
+import com.smeltingmetal.objects.mold.ItemMold;
+import com.smeltingmetal.utils.MetalUtils;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
@@ -21,11 +25,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.smeltingmetal.SmeltingMetalMod.MODID;
 
@@ -61,6 +66,7 @@ public class RecipeProcessor {
                 .toList();
         List<Recipe<?>> recipesToRemove = new ArrayList<>();
 
+        addMoldCraftingRecipes(recipeManager);
 
         if (shouldModifySmelting) {
             List<Recipe<?>> metalMeltingRecipesToRemove = metalRecipes.stream()
@@ -90,11 +96,56 @@ public class RecipeProcessor {
             addNuggetCraftingRecipes(recipeManager);
         }
 
-//        addRawCraftingRecipes(recipeManager); // TODO doesnt transfer metal type
+        // Remove recipes that produce items from MetalProperties
+        Set<ResourceLocation> metalResultIds = ModMetals.getMetalPropertiesMap().values().stream()
+                .flatMap(mp -> Stream.concat(
+                        mp.itemResults().values().stream(),
+                        mp.blockResults().values().stream()
+                ))
+                .collect(Collectors.toSet());
+
+        List<Recipe<?>> resultCraftingRecipesToRemove = metalRecipes.stream()
+                .filter(r -> {
+                    ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(r.getResultItem(registryAccess).getItem());
+                    return resultId != null && metalResultIds.contains(resultId);
+                })
+                .toList();
+
+        recipesToRemove.addAll(resultCraftingRecipesToRemove);
 
         recipesToRemove.forEach(recipe -> RecipeUtils.removeRecipeInManager(recipeManager, recipe.getId()));
     }
 
+    private static void addMoldCraftingRecipes(RecipeManager recipeManager) {
+        List<Item> itemMolds = List.of(ModItems.ITEM_MOLD_HARDENED.get(), ModItems.ITEM_MOLD_NETHERITE.get());
+        List<Item> blockMolds = List.of(ModBlocks.BLOCK_MOLD_HARDENED_ITEM.get(), ModBlocks.BLOCK_MOLD_NETHERITE_ITEM.get());
+
+        Map<String, RegistryObject<Item>> itemMoldsClay = ModItems.ITEM_MOLDS_CLAY;
+        Map<String, RegistryObject<Item>> blockMoldsClay = ModBlocks.BLOCK_MOLDS_CLAY;
+
+        for (boolean isBlock : List.of(false, true)) {
+            for (var entry : (isBlock ? blockMoldsClay : itemMoldsClay).entrySet()) {
+                String shape = entry.getKey();
+                Item inputMold = entry.getValue().get();
+                for (Item mold : (isBlock ? blockMolds : itemMolds)) {
+                    ItemStack resultStack = new ItemStack(mold);
+                    MetalUtils.setShapeToStack(resultStack, shape, isBlock);
+                    boolean isNetherite = (mold instanceof ItemMold itemMold && itemMold.getMaterialType() == MaterialType.NETHERITE)
+                            || (mold instanceof BlockMoldItem blockMold && blockMold.getMaterialType() == MaterialType.NETHERITE);
+                    if (isNetherite) {
+                        createAndAddMoldCraftingNetheriteUpgrade(recipeManager, inputMold, resultStack);
+                        createAndAddMoldSmithingNetheriteUpgrade(recipeManager, inputMold, resultStack);
+                    } else {
+                        if (isBlock) {
+                            LOGGER.info("Adding block mold recipe for " + mold);
+                        }
+                        createAndAddCookingRecipe(recipeManager, inputMold, resultStack, RecipeType.SMELTING, 200, 1.4f);
+                    }
+                }
+            }
+        }
+
+    }
 
     private static boolean doAllIngriedientsMatchPattern(ShapedRecipe shaped, String pattern) {
         return shaped.getIngredients().stream().allMatch(ing ->
@@ -109,12 +160,12 @@ public class RecipeProcessor {
 
     private static boolean isResourceMetal(ResourceLocation result) {
         if (result == null) return false;
-        return ModMetals.getAllMetalProperties().keySet().stream()
+        return MetalUtils.getAllMetalProperties().keySet().stream()
                 .anyMatch(metalKey -> result.getPath().contains(metalKey));
     }
 
     private static void addNuggetCraftingRecipes(RecipeManager recipeManager) {
-        for (MetalProperties metalProps : ModMetals.getAllMetalProperties().values()) {
+        for (MetalProperties metalProps : MetalUtils.getAllMetalProperties().values()) {
             // setup input and output items
             boolean useCrushed = ModList.get().isLoaded("create") && metalProps.crushed() != null;
             ResourceLocation nuggetGroupLoc = useCrushed ? metalProps.crushed() : metalProps.raw();
@@ -124,11 +175,11 @@ public class RecipeProcessor {
             if (nuggetGroup == null || nuggetItem == null) continue;
             if (nuggetGroup instanceof MetalItem || nuggetGroup instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetGroup);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
+                MetalUtils.setMetalToStack(stack, metalProps.name());
             }
             if (nuggetItem instanceof MetalItem || nuggetItem instanceof MetalBlockItem) {
                 ItemStack stack = new ItemStack(nuggetItem);
-                ModMetals.setMetalTypeToStack(stack, metalProps.name());
+                MetalUtils.setMetalToStack(stack, metalProps.name());
             }
 
             // create shapeless recipe
@@ -147,10 +198,10 @@ public class RecipeProcessor {
             nuggetIngs.set(i, Ingredient.of(singleItem));
         }
 
-        String metalName = RecipeUtils.getMetalKeyFromString(singleItem.toString());
+        String metalName = MetalUtils.getMetalKeyFromString(singleItem.toString());
         ItemStack groupStack = new ItemStack(groupItem, 1);
         if (metalName != null && (groupItem instanceof MetalItem || groupItem instanceof MetalBlockItem)) {
-            ModMetals.setMetalTypeToStack(groupStack, metalName);
+            MetalUtils.setMetalToStack(groupStack, metalName);
         }
 
         ShapedRecipe shapedRecipe = new ShapedRecipe(
@@ -168,10 +219,10 @@ public class RecipeProcessor {
         String shapelessRecipeIdSuffix = singleName + "_from_" + groupName;
         ResourceLocation shapelessRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapelessRecipeIdSuffix);
 
-        String metalName = RecipeUtils.getMetalKeyFromString(groupItem.toString());
+        String metalName = MetalUtils.getMetalKeyFromString(groupItem.toString());
         ItemStack singleStack = new ItemStack(singleItem, 9);
         if (metalName != null && (singleItem instanceof MetalItem || singleItem instanceof MetalBlockItem)) {
-            ModMetals.setMetalTypeToStack(singleStack, metalName);
+            MetalUtils.setMetalToStack(singleStack, metalName);
         }
 
         ShapelessRecipe shapelessRecipe = new ShapelessRecipe(
@@ -184,29 +235,17 @@ public class RecipeProcessor {
         RecipeUtils.createInRecipeInManager(recipeManager, shapelessRecipeId, shapelessRecipe);
     }
 
-    private static void addRawCraftingRecipes(RecipeManager recipeManager) {
-
-        Item rawItem = ModItems.RAW_METAL_ITEM.get();
-        Item rawBlock = ModBlocks.RAW_METAL_BLOCK_ITEM.get();
-        Item nugget = ModItems.METAL_NUGGET.get();
-
-        create1ItemFrom9(recipeManager, rawItem, rawBlock, "raw_metal", "raw_metal_block");
-        create9ItemsFrom1(recipeManager, rawItem, rawBlock, "raw_metal", "raw_metal_block");
-        create1ItemFrom9(recipeManager, nugget, rawItem, "nugget", "raw_metal");
-        create9ItemsFrom1(recipeManager, nugget, rawItem, "nugget", "raw_metal");
-    }
-
     private static void addNewCrushingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = RecipeUtils.getMetalKeyFromString(itemId.getPath());
+            String metalKey = MetalUtils.getMetalKeyFromString(itemId.getPath());
             if (metalKey == null) continue;
-            MetalProperties metalProps = ModMetals.getMetalProperties(metalKey);
+            MetalProperties metalProps = MetalUtils.getMetalProperties(metalKey);
             if (metalProps == null) continue;
             Item inputItem = ForgeRegistries.ITEMS.getValue(itemId);
             if (inputItem == null || inputItem == Items.AIR) continue;
             Item resultItem = ForgeRegistries.ITEMS.getValue(metalProps.crushed());
             if (resultItem == null || resultItem == Items.AIR) continue;
-            boolean isBlock = isItemBlock(itemId);
+            boolean isBlock = MetalUtils.isItemBlock(itemId);
             ItemStack resultStack = new ItemStack(resultItem, isBlock ? 9 : 1);
             if (resultStack.isEmpty()) continue;
 
@@ -235,11 +274,11 @@ public class RecipeProcessor {
 
     private static void addNewMetalMeltingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = RecipeUtils.getMetalKeyFromString(itemId.getPath());
+            String metalKey = MetalUtils.getMetalKeyFromString(itemId.getPath());
             if (metalKey == null) continue;
-            MetalProperties metalProps = ModMetals.getMetalProperties(metalKey);
+            MetalProperties metalProps = MetalUtils.getMetalProperties(metalKey);
             if (metalProps == null) continue;
-            boolean isBlock = metalProps.ingot() == null || (metalProps.block() != null && isItemBlock(itemId));
+            boolean isBlock = metalProps.ingot() == null || (metalProps.block() != null && MetalUtils.isItemBlock(itemId));
 
             // Create an input item
             Item inputItem = ForgeRegistries.ITEMS.getValue(itemId);
@@ -248,7 +287,7 @@ public class RecipeProcessor {
             // Create result stack
             Item resultItem = isBlock ? ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get() : ModItems.MOLTEN_METAL_ITEM.get();
             ItemStack resultStack = new ItemStack(resultItem);
-            ModMetals.setMetalTypeToStack(resultStack, metalProps.name());
+            MetalUtils.setMetalToStack(resultStack, metalProps.name());
 
             int time = isBlock ? 400 : 200;
             float xp = isBlock ? 1.4f : 0.7f;
@@ -274,6 +313,62 @@ public class RecipeProcessor {
         RecipeUtils.createInRecipeInManager(recipeManager, recipeId, recipe);
     }
 
+    private static void createAndAddMoldCraftingNetheriteUpgrade(RecipeManager recipeManager, Item input, ItemStack output) {
+        ResourceLocation inputId = ForgeRegistries.ITEMS.getKey(input);
+        if (inputId == null) return;
+
+        // Create recipe ID based on input item
+        String idName = String.format("smithing_%s_%s", inputId.getNamespace(), inputId.getPath());
+        ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID, idName);
+
+        // Set up ingredients for the cross pattern
+        NonNullList<Ingredient> ingredients = NonNullList.withSize(9, Ingredient.EMPTY);
+        Ingredient netheriteItem = Ingredient.of(input instanceof ItemMold ? Items.NETHERITE_SCRAP : Items.NETHERITE_INGOT);
+        Ingredient moldIngriedient = Ingredient.of(input);
+
+        // Create cross pattern (indices for 3x3 grid: 0-8)
+        ingredients.set(1, netheriteItem);  // Top center
+        ingredients.set(3, netheriteItem);  // Middle left
+        ingredients.set(4, moldIngriedient); // Center
+        ingredients.set(5, netheriteItem);  // Middle right
+        ingredients.set(7, netheriteItem);  // Bottom center
+
+        // Create and register the recipe
+        ShapedRecipe recipe = new ShapedRecipe(
+                recipeId,
+                "", // Group name (empty for no group)
+                CraftingBookCategory.MISC,
+                3, 3, // 3x3 grid
+                ingredients,
+                output
+        );
+
+        RecipeUtils.createInRecipeInManager(recipeManager, recipeId, recipe);
+    }
+
+    private static void createAndAddMoldSmithingNetheriteUpgrade(RecipeManager recipeManager, Item input, ItemStack output) {
+        ResourceLocation inputId = ForgeRegistries.ITEMS.getKey(input);
+        if (inputId == null) return;
+
+        String idName = String.format("smithing_%s_%s", inputId.getNamespace(), inputId.getPath());
+        ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID, idName);
+
+        Ingredient template = Ingredient.of(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
+        Ingredient base = Ingredient.of(input);
+        Ingredient addition = Ingredient.of(Items.NETHERITE_INGOT);
+
+        // Create the smithing recipe
+        SmithingTransformRecipe recipe = new SmithingTransformRecipe(
+                recipeId,
+                template,
+                base,
+                addition,
+                output
+        );
+
+        RecipeUtils.createInRecipeInManager(recipeManager, recipeId, recipe);
+    }
+
     private static void syncRecipesToPlayers() {
         if (SmeltingMetalMod.getServer() == null) return;
         var packet = new ClientboundUpdateRecipesPacket(
@@ -281,11 +376,5 @@ public class RecipeProcessor {
         for (var p : SmeltingMetalMod.getServer().getPlayerList().getPlayers()) {
             p.connection.send(packet);
         }
-    }
-
-    private static boolean isItemBlock(ResourceLocation itemId) {
-        if (itemId == null) return false;
-        String path = itemId.getPath();
-        return MetalsConfig.CONFIG.blockKeywords.get().stream().anyMatch(path::contains);
     }
 }

@@ -26,6 +26,8 @@ public class MetalsConfig {
      */
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> itemResultDefinitions;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockResultDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockKeywords;
         public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
@@ -37,7 +39,7 @@ public class MetalsConfig {
                     .push("metals");
 
             // Default metal definitions
-            List<String> defaultMetals = List.of("iron", "gold", "copper");
+            List<String> defaultMetals = List.of("iron", "gold", "copper", "netherite");
 
             metalDefinitions = builder
                     .comment("List of base metal names to be processed (e.g., iron, gold, tin).")
@@ -47,8 +49,20 @@ public class MetalsConfig {
                             obj -> obj instanceof String
                     );
 
+            // Default item result definitions
+            List<String> defaultItemResults = List.of("ingot", "pickaxe", "axe", "shovel", "sword", "hoe");
+            itemResultDefinitions = builder
+                    .comment("List of item result types that can be produced from metals (tools, armor, etc.).")
+                    .defineList("item_result_definitions", defaultItemResults, obj -> obj instanceof String);
+
+            // Default block result definitions
+            List<String> defaultBlockResults = List.of("block", "helmet=helmet,cap", "armor=chestplate,armor", "pants=pants,leggings", "boots=boots,shoes");
+            blockResultDefinitions = builder
+                    .comment("List of block result types that can be produced from metals.")
+                    .defineList("block_result_definitions", defaultBlockResults, obj -> obj instanceof String);
+
             // Blacklist keywords for items that should not be processed
-            List<String> defaultBlacklist = List.of("nugget");
+            List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template");
             blacklistKeywords = builder
                     .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
                     .defineList("blacklist_keywords", defaultBlacklist, obj -> true);

@@ -1,11 +1,12 @@
 {
-  // Item Molds TODO one tooltip for all
-  "item.smeltingmetal.item_mold_clay": "Clay Mold",
+  // Item Molds
+  "item.smeltingmetal.item_mold_clay": "Clay %s %s Mold",
+  "item.smeltingmetal.item_mold_clay.tooltip": "Change shape by right clicking with tool item.",
 
-  "item.smeltingmetal.item_mold_hardened": "Hardened %s Mold",
+  "item.smeltingmetal.item_mold_hardened": "Hardened %s %s Mold",
   "item.smeltingmetal.item_mold_hardened.tooltip": "After filling with Molten Metal, cool with water.",
 
-  "item.smeltingmetal.item_mold_netherite": "Netherite %s Mold",
+  "item.smeltingmetal.item_mold_netherite": "Netherite %s %s Mold",
   "item.smeltingmetal.item_mold_netherite.tooltip": "After filling with Molten Metal, cool with water.",
 
   // Metal Items
@@ -18,8 +19,9 @@
   "item.smeltingmetal.raw_metal": "Raw %s",
   "item.smeltingmetal.metal_nugget": "%s Nugget",
 
-  // Block Molds TODO one tooltip for all
+  // Block Molds
   "block.smeltingmetal.block_mold_clay": "Clay Block Mold",
+  "block.smeltingmetal.block_mold_clay.tooltip": "Change shape by right clicking with armor item.",
 
   "block.smeltingmetal.block_mold_hardened": "Hardened Block Mold",
   "block.smeltingmetal.block_mold_hardened.tooltip": "After filling with Bucket of Molten Metal, use water bucket to cool.",
@@ -28,8 +30,8 @@
   "block.smeltingmetal.block_mold_netherite.tooltip": "After filling with Bucket of Molten Metal, use water bucket to cool.",
   
   // Metal Blocks
-  "block.smeltingmetal.molten_metal_block": "Molten %s Block",
+  "block.smeltingmetal.molten_metal_block": "Molten Block",
   "block.smeltingmetal.molten_metal_block.tooltip": "This metal is so hot, you can only collect it with Bucket in inventory. Cool it down back into Block of Raw Ore with water or time.",
   
-  "block.smeltingmetal.raw_metal_block": "Raw %s Block"
+  "block.smeltingmetal.raw_metal_block": "Raw Block"
 }

@@ -2,6 +2,8 @@ package com.smeltingmetal.data;
 
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Map;
+
 /**
  * Represents the properties of a metal in the Smelting Metal mod.
  * This immutable record stores the essential identification and registration data for metals.
@@ -25,6 +27,8 @@ public record MetalProperties(
     ResourceLocation nugget,
     ResourceLocation crushed,
     ResourceLocation bucket,
-    ResourceLocation moltenFluid
+    ResourceLocation moltenFluid,
+    Map<String, ResourceLocation> itemResults,
+    Map<String, ResourceLocation> blockResults
 ) {
 }

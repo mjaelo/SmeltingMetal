@@ -1,14 +1,20 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "smeltingmetal:item/item_mold_hardened"
+    "layer0": "smeltingmetal:item/item_mold/item_mold_hardened_ingot"
   },
   "overrides": [
-    {
-      "predicate": {
-        "smeltingmetal:filled": 1
-      },
-      "model": "smeltingmetal:item/item_mold_hardened_filled"
-    }
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold/hardened_axe"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold/hardened_pickaxe"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold/hardened_shovel"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold/hardened_sword"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold/hardened_hoe"},
+    
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 0.0}, "model": "smeltingmetal:item/item_mold/hardened_ingot_filled"},
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold/hardened_axe_filled"},
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold/hardened_pickaxe_filled"},
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold/hardened_shovel_filled"},
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold/hardened_sword_filled"},
+    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold/hardened_hoe_filled"}
   ]
 }

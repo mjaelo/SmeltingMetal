@@ -1,14 +1,13 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "smeltingmetal:item/item_mold_clay"
+    "layer0": "smeltingmetal:item/item_mold/item_mold_clay_ingot"
   },
   "overrides": [
-    {
-      "predicate": {
-        "smeltingmetal:filled": 1
-      },
-      "model": "smeltingmetal:item/item_mold_clay_filled"
-    }
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold/clay_axe"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold/clay_pickaxe"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold/clay_shovel"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold/clay_sword"},
+    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold/clay_hoe"}
   ]
 }

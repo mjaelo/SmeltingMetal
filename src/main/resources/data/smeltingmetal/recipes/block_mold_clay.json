@@ -9,7 +9,7 @@
     "c": { "item": "minecraft:clay_ball" }
   },
   "result": {
-    "item": "smeltingmetal:block_mold_clay",
+    "item": "smeltingmetal:block_mold/clay_block",
     "count": 1
   }
 }

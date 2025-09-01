@@ -2,7 +2,6 @@ package com.smeltingmetal.recipes;
 
 import com.mojang.logging.LogUtils;
 import com.smeltingmetal.config.MetalsConfig;
-import com.smeltingmetal.init.ModMetals;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -71,19 +70,6 @@ public class RecipeUtils {
             }
         }
         throw new NoSuchFieldException("Could not find 'byName' field in RecipeManager.");
-    }
-
-    public static String getMetalKeyFromString(String path) {
-        String pathLower = path.toLowerCase();
-        for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
-            if (pathLower.contains(bad)) return null;
-        }
-        for (String metalKey : ModMetals.getAllMetalProperties().keySet()) {
-            String keyName = metalKey.contains(":") ? metalKey.split(":")[1] : metalKey;
-            if (pathLower.contains(keyName.toLowerCase())) return metalKey;
-        }
-
-        return null;
     }
 
     public static boolean isInputNotBlacklisted(Recipe<?> recipe) {

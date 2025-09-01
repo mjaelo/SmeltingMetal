@@ -2,11 +2,9 @@ package com.smeltingmetal.init;
 
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MaterialType;
-import com.smeltingmetal.items.mold.ItemMold;
-import com.smeltingmetal.items.molten.MoltenMetalBucket;
-import com.smeltingmetal.items.molten.MoltenMetalItem;
-import com.smeltingmetal.items.raw.MetalNugget;
-import com.smeltingmetal.items.raw.RawMetalItem;
+import com.smeltingmetal.objects.mold.ItemMold;
+import com.smeltingmetal.objects.molten.MoltenMetalBucket;
+import com.smeltingmetal.objects.molten.MoltenMetalItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -14,6 +12,9 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, SmeltingMetalMod.MODID);
@@ -32,15 +33,23 @@ public class ModItems {
             event.accept(MOLTEN_METAL_ITEM);
             event.accept(MOLTEN_METAL_BUCKET);
             event.accept(ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get());
-            event.accept(METAL_NUGGET);
-            event.accept(RAW_METAL_ITEM);
-            event.accept(ModBlocks.RAW_METAL_BLOCK_ITEM.get());
         }
     }
 
+    public static Map<String, RegistryObject<Item>> ITEM_MOLDS_CLAY = registerItemMoldShapes();
+
+    public static Map<String, RegistryObject<Item>> registerItemMoldShapes() {
+        Map<String, RegistryObject<Item>> itemMolds = new HashMap<>();
+        for (String shape : ModMetals.DEFAULT_ITEM_SHAPES) {
+            itemMolds.put(shape, ITEMS.register("item_mold/clay_" + shape,
+                    () -> new ItemMold(new Item.Properties(), MaterialType.CLAY, shape)));
+        }
+        return itemMolds;
+    }
+
+
     // Mold items
-    public static final RegistryObject<Item> ITEM_MOLD_CLAY = ITEMS.register("item_mold_clay",
-            () -> new ItemMold(new Item.Properties(),  MaterialType.CLAY));
+    public static final RegistryObject<Item> ITEM_MOLD_CLAY = ITEM_MOLDS_CLAY.get(ModMetals.DEFAULT_ITEM_SHAPE);
     
     public static final RegistryObject<Item> ITEM_MOLD_HARDENED = ITEMS.register("item_mold_hardened",
             () -> new ItemMold(new Item.Properties(),  MaterialType.HARDENED));
@@ -54,13 +63,6 @@ public class ModItems {
 
     public static final RegistryObject<Item> MOLTEN_METAL_BUCKET = ITEMS.register("molten_metal_bucket",
             () -> new MoltenMetalBucket(new Item.Properties().stacksTo(1)));
-
-    // Raw metal items
-    public static final RegistryObject<Item> METAL_NUGGET = ITEMS.register("metal_nugget",
-            () -> new MetalNugget(new Item.Properties()));
-
-    public static final RegistryObject<Item> RAW_METAL_ITEM = ITEMS.register("raw_metal",
-            () -> new RawMetalItem(new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
