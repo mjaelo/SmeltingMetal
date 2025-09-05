@@ -1,12 +1,12 @@
 {
   // Item Molds
-  "item.smeltingmetal.item_mold_clay": "Clay %s %s Mold",
+  "item.smeltingmetal.item_mold_clay": "Clay %s Mold",
   "item.smeltingmetal.item_mold_clay.tooltip": "Change shape by right clicking with tool item.",
 
-  "item.smeltingmetal.item_mold_hardened": "Hardened %s %s Mold",
+  "item.smeltingmetal.item_mold_hardened": "Hardened %s Mold",
   "item.smeltingmetal.item_mold_hardened.tooltip": "After filling with Molten Metal, cool with water.",
 
-  "item.smeltingmetal.item_mold_netherite": "Netherite %s %s Mold",
+  "item.smeltingmetal.item_mold_netherite": "Netherite %s Mold",
   "item.smeltingmetal.item_mold_netherite.tooltip": "After filling with Molten Metal, cool with water.",
 
   // Metal Items

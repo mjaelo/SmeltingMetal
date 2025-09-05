@@ -56,7 +56,7 @@ public class MetalsConfig {
                     .defineList("item_result_definitions", defaultItemResults, obj -> obj instanceof String);
 
             // Default block result definitions
-            List<String> defaultBlockResults = List.of("block", "helmet=helmet,cap", "armor=chestplate,armor", "pants=pants,leggings", "boots=boots,shoes");
+            List<String> defaultBlockResults = List.of("block", "helmet=helmet,cap", "armor=chestplate,tunic,armor", "pants=pants,leggings", "boots=boots,shoes");
             blockResultDefinitions = builder
                     .comment("List of block result types that can be produced from metals.")
                     .defineList("block_result_definitions", defaultBlockResults, obj -> obj instanceof String);

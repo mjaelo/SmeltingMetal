@@ -88,6 +88,9 @@ public class ModMetals {
         // Parse the metal definition string
         String[] parts = metalDef.split(",");
         String metalName = parts[0].trim();
+        if (metalName.contains(":")) {
+            metalName = metalName.substring(metalName.indexOf(':') + 1);
+        }
 
         // Default values
         String ingotPath = metalName + "_ingot";
@@ -103,11 +106,7 @@ public class ModMetals {
         Map<String, ResourceLocation> itemResults = new HashMap<>();
         Map<String, ResourceLocation> blockResults = new HashMap<>();
 
-        // Populate item results from ITEM_SHAPE_MAP TODO only item and block are registered for gold
-
         populateResults(metalName, ITEM_SHAPE_MAP, itemResults);
-
-        // Populate block results from BLOCK_SHAPE_MAP
         populateResults(metalName, BLOCK_SHAPE_MAP, blockResults);
 
         // Parse custom paths if provided

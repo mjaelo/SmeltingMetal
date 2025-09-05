@@ -47,8 +47,8 @@ public class BlockMoldEntity extends BlockEntity {
     public int getShapeIndex() {
         return switch (shapeType) {
             case "helmet" -> 1;
-            case "chestplate" -> 2;
-            case "leggings" -> 3;
+            case "armor" -> 2;
+            case "pants" -> 3;
             case "boots" -> 4;
             default -> 0; // block
         };
