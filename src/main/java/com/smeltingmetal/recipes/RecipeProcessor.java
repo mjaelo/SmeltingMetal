@@ -56,6 +56,9 @@ public class RecipeProcessor {
         boolean isCreateLoaded = ModList.get().isLoaded("create");
         boolean shouldModifyCrushing = isCreateLoaded && MetalsConfig.CONFIG.enableCrushingRecipeReplacement.get();
         boolean shouldModifySmelting = MetalsConfig.CONFIG.enableMeltingRecipeReplacement.get();
+        boolean shouldModifyNugget = MetalsConfig.CONFIG.enableNuggetRecipeReplacement.get();
+        boolean shouldRemoveResultRecipes = MetalsConfig.CONFIG.enableResultRecipeRemoval.get();
+
 
         List<Recipe<?>> metalRecipes = new ArrayList<>(recipeManager.getRecipes()).stream()
                 .filter(r -> isResourceMetal(RecipeUtils.getRecipeResultLocation(registryAccess, r)))
@@ -86,7 +89,7 @@ public class RecipeProcessor {
             addNewCrushingRecipes(recipeManager, metalItems);
         }
 
-        if (MetalsConfig.CONFIG.enableNuggetRecipeReplacement.get()) {
+        if (shouldModifyNugget) {
             List<Recipe<?>> nuggetCraftingRecipesToRemove = metalRecipes.stream()
                     .filter(r -> r instanceof ShapedRecipe shaped
                             && shaped.getWidth() == 3 && shaped.getHeight() == 3
@@ -97,21 +100,22 @@ public class RecipeProcessor {
         }
 
         // Remove recipes that produce items from MetalProperties
-        Set<ResourceLocation> metalResultIds = ModMetals.getMetalPropertiesMap().values().stream()
-                .flatMap(mp -> Stream.concat(
-                        mp.itemResults().values().stream(),
-                        mp.blockResults().values().stream()
-                ))
-                .collect(Collectors.toSet());
+        if (shouldRemoveResultRecipes) {
+            Set<ResourceLocation> metalResultIds = ModMetals.getMetalPropertiesMap().values().stream()
+                    .flatMap(mp -> Stream.concat(
+                            mp.itemResults().values().stream(),
+                            mp.blockResults().values().stream()
+                    ))
+                    .collect(Collectors.toSet());
 
-        List<Recipe<?>> resultCraftingRecipesToRemove = metalRecipes.stream()
-                .filter(r -> {
-                    ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(r.getResultItem(registryAccess).getItem());
-                    return resultId != null && metalResultIds.contains(resultId);
-                })
-                .toList();
-
-        recipesToRemove.addAll(resultCraftingRecipesToRemove);
+            List<Recipe<?>> resultCraftingRecipesToRemove = metalRecipes.stream()
+                    .filter(r -> {
+                        ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(r.getResultItem(registryAccess).getItem());
+                        return resultId != null && metalResultIds.contains(resultId);
+                    })
+                    .toList();
+            recipesToRemove.addAll(resultCraftingRecipesToRemove);
+        }
 
         recipesToRemove.forEach(recipe -> RecipeUtils.removeRecipeInManager(recipeManager, recipe.getId()));
     }

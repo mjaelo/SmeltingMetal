@@ -20,16 +20,14 @@ import org.slf4j.LoggerFactory;
  * Main mod class for the Smelting Metal mod.
  * This class initializes all mod components, handles configuration loading,
  * and manages core mod functionality and lifecycle events.
- * TODO change config description
- * TODO add colored item overlays for molten metal
- * TODO add option to disable tool and armor replacements
  * TODO add custom results by editing hardened and netherite molds directly
  *      heat up molds and then print items in them? right click lava?
  *      new molds: heated hardened and netherite molds? (reddened sides)
  *      after right clicking item with a heated mold, it becomes cooled?
+ * TODO add colored item overlays for molten metal
  * TODO add gem processing.
- *    create gemProperties, similar to MetalProperties, but with different path patterns
- *      only gem (insted of ingot), block, maybe raw? new dust item and block.
+ *      create gemProperties, similar to MetalProperties, but with different path patterns
+ *      only gem (insted of ingot), block, new dust item and block.
  *      crush gem into dust which can fill item molds and bucket which can fill block mold
  *      lava can turn filled molds into gem items
  *      how to crush gems into dust? (apart from create crushers) new tool?

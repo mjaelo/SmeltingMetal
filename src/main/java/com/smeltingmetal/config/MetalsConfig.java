@@ -33,6 +33,7 @@ public class MetalsConfig {
         public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
+        public final ForgeConfigSpec.BooleanValue enableResultRecipeRemoval;
 
         public Config(ForgeConfigSpec.Builder builder) {
             builder.comment("Metal processing configuration")
@@ -64,13 +65,13 @@ public class MetalsConfig {
             // Blacklist keywords for items that should not be processed
             List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template");
             blacklistKeywords = builder
-                    .comment("List of keywords to blacklist from processing. Any item containing these strings in its registry name will be skipped from both melting and Create crushing recipes.")
+                    .comment("List of keywords to blacklist from processing. Any item containing these strings in its name will be skipped from both melting and Create crushing recipes.")
                     .defineList("blacklist_keywords", defaultBlacklist, obj -> true);
 
             // Block keywords for identifying block items
             List<String> defaultBlockKeywords = List.of("block", "slab", "stairs", "wall", "bricks", "tiles");
             blockKeywords = builder
-                    .comment("List of keywords that identify block items. Any item containing these strings in its registry name will be treated as a block.")
+                    .comment("List of keywords that identify block items. Any metal item containing these strings in its name will output a molten metal block when melted.")
                     .defineList("block_keywords", defaultBlockKeywords, obj -> true);
 
             builder.pop();
@@ -90,6 +91,10 @@ public class MetalsConfig {
             enableNuggetRecipeReplacement = builder
                     .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")
                     .define("enable_nugget_recipe_replacement", true);
+
+            enableResultRecipeRemoval = builder
+                    .comment("Enable removal of recipes for items in result lists.")
+                    .define("enable_result_recipe_removal", true);
 
             builder.pop();
         }
