@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "side": "smeltingmetal:block/block_mold_shape/hardened_helmet",
+    "top": "smeltingmetal:block/block_mold_top/hardened_top_metal",
+    "bottom": "smeltingmetal:block/block_mold_shape/hardened_block"
+  }
+}

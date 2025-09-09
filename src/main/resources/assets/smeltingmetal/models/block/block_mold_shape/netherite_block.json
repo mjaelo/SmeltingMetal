@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "side": "smeltingmetal:block/block_mold_shape/netherite_block",
+    "top": "smeltingmetal:block/block_mold_top/netherite_top",
+    "bottom": "smeltingmetal:block/block_mold_shape/netherite_block"
+  }
+}

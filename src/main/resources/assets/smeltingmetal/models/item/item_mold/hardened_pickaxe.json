@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "smeltingmetal:item/item_mold/item_mold_hardened_pickaxe"
-  }
-}

@@ -2,6 +2,8 @@ package com.smeltingmetal.init;
 
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MaterialType;
+import com.smeltingmetal.objects.gem.GemDustBlock;
+import com.smeltingmetal.objects.gem.GemDustBlockItem;
 import com.smeltingmetal.objects.mold.BlockMold;
 import com.smeltingmetal.objects.mold.BlockMoldItem;
 import com.smeltingmetal.objects.molten.MoltenMetalBlock;
@@ -26,7 +28,7 @@ public class ModBlocks {
     public static Map<String, RegistryObject<Item>> registerBlockMoldShapes() {
         Map<String, RegistryObject<Item>> blockMolds = new HashMap<>();
         for (String shape : ModMetals.DEFAULT_BLOCK_SHAPES) {
-            blockMolds.put(shape, BLOCK_ITEMS.register("block_mold/clay_" + shape,
+            blockMolds.put(shape, BLOCK_ITEMS.register("block_mold_shape/clay_" + shape,
                     () -> new BlockMoldItem(ModBlocks.BLOCK_MOLD_CLAY.get(), new Item.Properties(), MaterialType.CLAY, shape)));
         }
         return blockMolds;
@@ -56,6 +58,12 @@ public class ModBlocks {
 
     public static final RegistryObject<Item> MOLTEN_METAL_BLOCK_ITEM = BLOCK_ITEMS.register("molten_metal_block",
             () -> new MoltenMetalBlockItem(MOLTEN_METAL_BLOCK.get(), new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Block> GEM_DUST_BLOCK = BLOCKS.register("gem_dust_block",
+            () -> new GemDustBlock(BlockBehaviour.Properties.of()));
+
+    public static final RegistryObject<Item> GEM_DUST_BLOCK_ITEM = BLOCK_ITEMS.register("gem_dust_block",
+            () -> new GemDustBlockItem(GEM_DUST_BLOCK.get(), new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);

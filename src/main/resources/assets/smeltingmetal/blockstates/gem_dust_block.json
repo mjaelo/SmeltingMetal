@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "smeltingmetal:block/gem_dust_block" }
+  }
+}

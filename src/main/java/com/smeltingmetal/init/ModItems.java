@@ -3,6 +3,7 @@ package com.smeltingmetal.init;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.objects.mold.ItemMold;
+import com.smeltingmetal.objects.gem.GemDustItem;
 import com.smeltingmetal.objects.molten.MoltenMetalBucket;
 import com.smeltingmetal.objects.molten.MoltenMetalItem;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -30,9 +31,11 @@ public class ModItems {
             event.accept(ModBlocks.BLOCK_MOLD_HARDENED_ITEM.get());
             event.accept(ModBlocks.BLOCK_MOLD_NETHERITE_ITEM.get());
             // add generic metal items
+            event.accept(GEM_DUST_ITEM);
             event.accept(MOLTEN_METAL_ITEM);
             event.accept(MOLTEN_METAL_BUCKET);
             event.accept(ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get());
+            event.accept(ModBlocks.GEM_DUST_BLOCK_ITEM.get());
         }
     }
 
@@ -41,7 +44,7 @@ public class ModItems {
     public static Map<String, RegistryObject<Item>> registerItemMoldShapes() {
         Map<String, RegistryObject<Item>> itemMolds = new HashMap<>();
         for (String shape : ModMetals.DEFAULT_ITEM_SHAPES) {
-            itemMolds.put(shape, ITEMS.register("item_mold/clay_" + shape,
+            itemMolds.put(shape, ITEMS.register("item_mold_empty/clay_" + shape,
                     () -> new ItemMold(new Item.Properties(), MaterialType.CLAY, shape)));
         }
         return itemMolds;
@@ -63,6 +66,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> MOLTEN_METAL_BUCKET = ITEMS.register("molten_metal_bucket",
             () -> new MoltenMetalBucket(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> GEM_DUST_ITEM = ITEMS.register("gem_dust_item",
+            () -> new GemDustItem(new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

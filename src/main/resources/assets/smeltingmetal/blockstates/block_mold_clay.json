@@ -1,9 +1,9 @@
 {
   "variants": {
-    "has_metal=false,shape=0": { "model": "smeltingmetal:block/block_mold/clay_block" },
-    "has_metal=false,shape=1": { "model": "smeltingmetal:block/block_mold/clay_helmet" },
-    "has_metal=false,shape=2": { "model": "smeltingmetal:block/block_mold/clay_armor" },
-    "has_metal=false,shape=3": { "model": "smeltingmetal:block/block_mold/clay_pants" },
-    "has_metal=false,shape=4": { "model": "smeltingmetal:block/block_mold/clay_boots" }
+    "has_metal=false,shape=0": { "model": "smeltingmetal:block/block_mold_shape/clay_block" },
+    "has_metal=false,shape=1": { "model": "smeltingmetal:block/block_mold_shape/clay_helmet" },
+    "has_metal=false,shape=2": { "model": "smeltingmetal:block/block_mold_shape/clay_armor" },
+    "has_metal=false,shape=3": { "model": "smeltingmetal:block/block_mold_shape/clay_pants" },
+    "has_metal=false,shape=4": { "model": "smeltingmetal:block/block_mold_shape/clay_boots" }
   }
 }

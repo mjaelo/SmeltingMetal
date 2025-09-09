@@ -140,9 +140,6 @@ public class RecipeProcessor {
                         createAndAddMoldCraftingNetheriteUpgrade(recipeManager, inputMold, resultStack);
                         createAndAddMoldSmithingNetheriteUpgrade(recipeManager, inputMold, resultStack);
                     } else {
-                        if (isBlock) {
-                            LOGGER.info("Adding block mold recipe for " + mold);
-                        }
                         createAndAddCookingRecipe(recipeManager, inputMold, resultStack, RecipeType.SMELTING, 200, 1.4f);
                     }
                 }

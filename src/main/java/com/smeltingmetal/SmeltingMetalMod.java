@@ -20,17 +20,19 @@ import org.slf4j.LoggerFactory;
  * Main mod class for the Smelting Metal mod.
  * This class initializes all mod components, handles configuration loading,
  * and manages core mod functionality and lifecycle events.
+ * TODO fix bug, where netherite item mold doesnt remove its nbt tag after cooling
+ * TODO add gem processing.
+ *      handle gem NBT data
+ *      create gemProperties, with gem and gem block,
+ *      add recipes to crush gems into gem dust item and block.
+ *      right click mold or bucket with dust to fill them?
+ *      item mold right click lava to get result
+ *      block mold right click with lava bucket to get result
+ *      how to crush gems into dust? (apart from create crushers) new tool? crafting recipe?
  * TODO add custom results by editing hardened and netherite molds directly
  *      heat up molds and then print items in them? right click lava?
  *      new molds: heated hardened and netherite molds? (reddened sides)
  *      after right clicking item with a heated mold, it becomes cooled?
- * TODO add colored item overlays for molten metal
- * TODO add gem processing.
- *      create gemProperties, similar to MetalProperties, but with different path patterns
- *      only gem (insted of ingot), block, new dust item and block.
- *      crush gem into dust which can fill item molds and bucket which can fill block mold
- *      lava can turn filled molds into gem items
- *      how to crush gems into dust? (apart from create crushers) new tool?
  */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {

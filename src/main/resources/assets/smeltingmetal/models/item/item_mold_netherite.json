@@ -1,20 +1,21 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "smeltingmetal:item/item_mold/item_mold_netherite_ingot"
-  },
-  "overrides": [
-    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold/netherite_axe"},
-    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold/netherite_pickaxe"},
-    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold/netherite_shovel"},
-    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold/netherite_sword"},
-    {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold/netherite_hoe"},
-    
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 0.0}, "model": "smeltingmetal:item/item_mold/netherite_ingot_filled"},
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold/netherite_axe_filled"},
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold/netherite_pickaxe_filled"},
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold/netherite_shovel_filled"},
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold/netherite_sword_filled"},
-    {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold/netherite_hoe_filled"}
-  ]
+ "parent": "minecraft:item/generated",
+ "textures": {
+   "layer0": "smeltingmetal:item/item_mold/item_mold_netherite",
+   "layer1": "smeltingmetal:item/empty_shape/empty_ingot"
+   },
+ "overrides": [
+  {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold_empty/netherite_axe"},
+  {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold_empty/netherite_pickaxe"},
+  {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold_empty/netherite_shovel"},
+  {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold_empty/netherite_sword"},
+  {"predicate": {"smeltingmetal:has_metal": 0.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold_empty/netherite_hoe"},
+
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 0.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_ingot_metal"},
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 1.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_axe_metal"},
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 2.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_pickaxe_metal"},
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 3.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_shovel_metal"},
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 4.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_sword_metal"},
+  {"predicate": {"smeltingmetal:has_metal": 1.0, "smeltingmetal:shape": 5.0}, "model": "smeltingmetal:item/item_mold_metal/netherite_hoe_metal"}
+ ]
 }
