@@ -9,7 +9,7 @@ import java.util.List;
  * blacklist keywords, and feature toggles. This class manages the mod's runtime
  * configuration using Forge's configuration system.
  */
-public class MetalsConfig {
+public class ModConfig {
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static final Config CONFIG;
 
@@ -26,11 +26,13 @@ public class MetalsConfig {
      */
     public static class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> metalDefinitions;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> gemDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> itemResultDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockResultDefinitions;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklistKeywords;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> blockKeywords;
         public final ForgeConfigSpec.BooleanValue enableMeltingRecipeReplacement;
+        public final ForgeConfigSpec.BooleanValue enableGemRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableResultRecipeRemoval;
@@ -41,7 +43,6 @@ public class MetalsConfig {
 
             // Default metal definitions
             List<String> defaultMetals = List.of("iron", "gold", "copper", "netherite");
-
             metalDefinitions = builder
                     .comment("List of base metal names to be processed (e.g., iron, gold, tin).")
                     .defineList(
@@ -50,16 +51,26 @@ public class MetalsConfig {
                             obj -> obj instanceof String
                     );
 
+            // Default gem definitions
+            List<String> defaultGems = List.of("diamond");
+            gemDefinitions = builder
+                    .comment("List of base gem names to be processed (e.g., diamond, emerald, ruby, sapphire).")
+                    .defineList(
+                            "gem_definitions",
+                            defaultGems,
+                            obj -> obj instanceof String
+                    );
+
             // Default item result definitions
             List<String> defaultItemResults = List.of("ingot", "pickaxe", "axe", "shovel", "sword", "hoe");
             itemResultDefinitions = builder
-                    .comment("List of item result types that can be produced from metals (tools, armor, etc.).")
+                    .comment("List of item result types that can be produced from metals with their keywords.")
                     .defineList("item_result_definitions", defaultItemResults, obj -> obj instanceof String);
 
             // Default block result definitions
             List<String> defaultBlockResults = List.of("block", "helmet=helmet,cap", "armor=chestplate,tunic,armor", "pants=pants,leggings", "boots=boots,shoes");
             blockResultDefinitions = builder
-                    .comment("List of block result types that can be produced from metals.")
+                    .comment("List of block result types that can be produced from metals with their keywords.")
                     .defineList("block_result_definitions", defaultBlockResults, obj -> obj instanceof String);
 
             // Blacklist keywords for items that should not be processed
@@ -83,6 +94,10 @@ public class MetalsConfig {
             enableMeltingRecipeReplacement = builder
                     .comment("Enable replacement of smelting/blasting recipes with molten metal recipes")
                     .define("enable_melting_recipe_replacement", true);
+
+            enableGemRecipeReplacement = builder
+                    .comment("Enable replacement of gem recipes with gem dust recipes")
+                    .define("enable_gem_recipe_replacement", true);
 
             enableCrushingRecipeReplacement = builder
                     .comment("Enable replacement of crushing recipes with crushed metal recipes")

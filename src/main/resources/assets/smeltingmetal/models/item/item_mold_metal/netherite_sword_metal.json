@@ -1,0 +1,7 @@
+ {
+ "parent": "minecraft:item/generated",
+ "textures": {
+   "layer0": "smeltingmetal:item/item_mold/item_mold_netherite",
+ "layer1": "smeltingmetal:item/metal_shape/metal_sword"
+ }
+ }

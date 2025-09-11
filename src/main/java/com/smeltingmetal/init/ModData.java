@@ -1,7 +1,8 @@
 package com.smeltingmetal.init;
 
 import com.mojang.logging.LogUtils;
-import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.config.ModConfig;
+import com.smeltingmetal.data.GemProperties;
 import com.smeltingmetal.data.MetalProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -15,17 +16,20 @@ import java.util.*;
  * Handles loading metal configurations, applying overrides, and providing access to metal properties.
  * This includes default metal definitions and any custom metals defined in the configuration.
  */
-public class ModMetals {
+public class ModData {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean initialized = false;
 
     private static final Map<String, MetalProperties> METAL_PROPERTIES_MAP = new HashMap<>();
+    private static final Map<String, GemProperties> GEM_PROPERTIES_MAP = new HashMap<>();
     private static Map<String, List<String>> ITEM_SHAPE_MAP;
     private static Map<String, List<String>> BLOCK_SHAPE_MAP;
     public static final List<String> DEFAULT_ITEM_SHAPES = List.of("ingot", "axe", "pickaxe", "shovel", "sword", "hoe");
     public static final List<String> DEFAULT_BLOCK_SHAPES = List.of("block", "helmet", "armor", "pants", "boots");
-    public static final String METAL_KEY = "has_metal";
+    public static final String CONTENT_KEY = "content";
     public static final String DEFAULT_METAL = "metal";
+    public static final String DEFAULT_GEM = "gem";
+    public static final String DEFAULT_CONTENT = "metal";
     public static final String SHAPE_KEY = "shape";
     public static final String DEFAULT_ITEM_SHAPE = "ingot";
     public static final String DEFAULT_BLOCK_SHAPE = "block";
@@ -38,26 +42,35 @@ public class ModMetals {
         METAL_PROPERTIES_MAP.clear();
 
         try {
-            if (MetalsConfig.CONFIG == null) {
+            if (ModConfig.CONFIG == null) {
                 LOGGER.warn("Failed to get MetalsConfig instance.");
                 return;
             }
 
-            if (MetalsConfig.CONFIG.metalDefinitions == null) {
+            if (ModConfig.CONFIG.metalDefinitions == null) {
                 LOGGER.warn("Config not loaded yet, skipping metal initialization.");
                 return;
             }
 
-            List<? extends String> metalDefs = MetalsConfig.CONFIG.metalDefinitions.get();
+            List<? extends String> metalDefs = ModConfig.CONFIG.metalDefinitions.get();
+            List<? extends String> gemDefs = ModConfig.CONFIG.gemDefinitions.get();
+
+            ITEM_SHAPE_MAP = processResultDefinitions(ModConfig.CONFIG.itemResultDefinitions.get());
+            BLOCK_SHAPE_MAP = processResultDefinitions(ModConfig.CONFIG.blockResultDefinitions.get());
 
             if (metalDefs.isEmpty()) {
                 LOGGER.warn("No metal definitions found in config.");
             } else {
-                ITEM_SHAPE_MAP = processResultDefinitions(MetalsConfig.CONFIG.itemResultDefinitions.get());
-                BLOCK_SHAPE_MAP = processResultDefinitions(MetalsConfig.CONFIG.blockResultDefinitions.get());
-
                 for (String metalName : metalDefs) {
                     parseMetalProperties(metalName.trim());
+                }
+            }
+
+            if (gemDefs.isEmpty()) {
+                LOGGER.warn("No gem definitions found in config.");
+            } else {
+                for (String gemName : gemDefs) {
+                    parseGemProperties(gemName.trim());
                 }
             }
         } catch (Exception e) {
@@ -154,6 +167,52 @@ public class ModMetals {
         LOGGER.info("Created MetalProperties for metal: {}", metalName);
     }
 
+    private static void parseGemProperties(String gemDef) {
+        String[] parts = gemDef.split(",");
+        String gemName = parts[0].trim();
+        if (gemName.contains(":")) {
+            gemName = gemName.substring(gemName.indexOf(':') + 1);
+        }
+
+        // Default values
+        String gemPath = gemName;
+        String blockPath = gemName + "_block";
+
+        // Create maps to store item and block results
+        Map<String, ResourceLocation> itemResults = new HashMap<>();
+        Map<String, ResourceLocation> blockResults = new HashMap<>();
+
+        populateResults(gemName, ITEM_SHAPE_MAP, itemResults);
+        populateResults(gemName, BLOCK_SHAPE_MAP, blockResults);
+
+        // Parse custom paths if provided
+        for (int i = 1; i < parts.length; i++) {
+            String[] keyValue = parts[i].split("=", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                switch (key) {
+                    case "gem" -> gemPath = value;
+                    case "block" -> blockPath = value;
+                    default -> LOGGER.warn("Unknown property '{}' for gem '{}'", key, gemName);
+                }
+            }
+        }
+
+        ResourceLocation gem = findInRegistry(ForgeRegistries.ITEMS, gemPath);
+        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath);
+
+        if (gem == null && block == null) {
+            LOGGER.error("Missing required items for gem '{}'. Failed to create GemProperties. (gem: {}, block: {})",
+                    gemName, gemPath, blockPath);
+            return;
+        }
+
+        GemProperties properties = new GemProperties(gemName, gem, block, itemResults, blockResults);
+        GEM_PROPERTIES_MAP.put(gemName, properties);
+        LOGGER.info("Created GemProperties for gem: {}", gemName);
+    }
+
     private static <T> ResourceLocation findInRegistryContaining(IForgeRegistry<T> registry, List<String> keywords) {
         return registry.getValues().stream()
                 .map(registry::getKey)
@@ -187,7 +246,7 @@ public class ModMetals {
                 .forEach(shapeSet -> shapeSet.getValue().stream()
                         .map(shapeValue -> {
                             ResourceLocation item = findInRegistry(ForgeRegistries.ITEMS, metalName + "_" + shapeValue);
-                            return item != null ? item : findInRegistryContaining(ForgeRegistries.ITEMS, List.of(metalName, "_"+shapeValue));
+                            return item != null ? item : findInRegistryContaining(ForgeRegistries.ITEMS, List.of(metalName, "_" + shapeValue));
                         })
                         .filter(Objects::nonNull)
                         .findFirst()
@@ -204,5 +263,9 @@ public class ModMetals {
 
     public static Map<String, MetalProperties> getMetalPropertiesMap() {
         return METAL_PROPERTIES_MAP;
+    }
+
+    public static Map<String, GemProperties> getGemPropertiesMap() {
+        return GEM_PROPERTIES_MAP;
     }
 }

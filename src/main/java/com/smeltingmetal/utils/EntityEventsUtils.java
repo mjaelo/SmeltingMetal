@@ -1,14 +1,14 @@
 package com.smeltingmetal.utils;
 
+import com.smeltingmetal.data.GemProperties;
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.data.MetalProperties;
+import com.smeltingmetal.init.ModData;
+import com.smeltingmetal.init.ModItems;
 import com.smeltingmetal.objects.mold.BlockMoldEntity;
 import com.smeltingmetal.objects.mold.ItemMold;
 import com.smeltingmetal.objects.molten.MoltenMetalBucket;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -30,7 +30,7 @@ public class EntityEventsUtils {
         if (level.getBlockState(pos).is(Blocks.FIRE)) return false;
         boolean shouldCool = entity.getAge() >= COOL_TICKS;
 
-        ItemStack cooledStack = ServerEventsUtils.getCooledMetalStack(containerStack, level, pos, shouldCool);
+        ItemStack cooledStack = ServerEventsUtils.getCooledContentStack(containerStack, level, pos, shouldCool);
         if (cooledStack == null || cooledStack.isEmpty()) return false;
 
         // Drop the cooled item
@@ -44,11 +44,11 @@ public class EntityEventsUtils {
         return true;
     }
 
-    public static boolean fillBlockMold(Level level, BlockPos pos, Player player, BlockMoldEntity be, ItemStack heldStack, String metalName) {
-        if (be.hasMetal()) {
+    public static boolean fillBlockMold(Player player, BlockMoldEntity be, ItemStack heldStack, String content) {
+        if (be.hasContent()) {
             return false;
         }
-        be.fill(metalName);
+        be.setContent(content);
 
         // Replace the molten metal bucket with an empty bucket
         if (!player.getAbilities().instabuild) {
@@ -59,32 +59,35 @@ public class EntityEventsUtils {
             }
         }
 
-        // Play sound and return success
-        level.playSound(null, pos, SoundEvents.BUCKET_EMPTY_LAVA, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }
 
     public static boolean coolBlockMold(BlockPos pos, Player player, BlockMoldEntity be, ItemStack heldStack, Level level) {
-        if (!be.hasMetal()) return false;
-        String metalType = be.getMetalType();
-        MetalProperties metalProps = MetalUtils.getMetalProperties(metalType);
-        if (metalProps == null) return false;
+        if (!be.hasContent()) return false;
+        String content = be.getContent();
+        MetalProperties metalProps = ModUtils.getMetalProperties(content);
+        GemProperties gemProperties = ModUtils.getGemProperties(content);
+        boolean isMetal = metalProps != null;
+        if (metalProps == null && gemProperties == null) return false;
 
         // Create the metal block result
-        Item blockId = getBlockResult(be.getShapeType(), metalProps);
-        if (blockId == null) return false;
-        ItemStack resultStack = new ItemStack(blockId);
+        String shape = be.getShape();
+        Item resultItem = ForgeRegistries.ITEMS.getValue(
+                ServerEventsUtils.getItemResult(
+                        shape,
+                        isMetal ? metalProps.blockResults() : gemProperties.blockResults(),
+                        isMetal ? metalProps.block() : gemProperties.block())
+        );
+        if (resultItem == null || resultItem == Items.AIR) return false;
+        ItemStack resultStack = new ItemStack(resultItem);
 
         // Drop the resulting item
-        ItemEntity itemEntity = new ItemEntity(level,
-                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
-                resultStack);
-        level.addFreshEntity(itemEntity);
+        player.drop(resultStack, false);
 
         // Handle mold based on material type
         MaterialType moldMaterial = be.getMaterialType();
         if (moldMaterial == MaterialType.NETHERITE) {
-            be.removeMetal();
+            be.removeContent();
         } else {
             level.destroyBlock(pos, false);
         }
@@ -100,29 +103,20 @@ public class EntityEventsUtils {
             }
         }
 
-        // Play sound and return success
-        level.playSound(null, pos, SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }
 
-    private static Item getBlockResult(String shapeType, MetalProperties metalProps) {
-        Item defaultItem = ForgeRegistries.ITEMS.getValue(metalProps.block());
-        ResourceLocation result = metalProps.blockResults().get(shapeType);
-        Item resultItem = ForgeRegistries.ITEMS.getValue(result);
-        return resultItem != null && resultItem != Items.AIR ? resultItem : defaultItem;
-    }
-
-    public static boolean fillBucketFromBlockMold(BlockPos pos, Player player, BlockMoldEntity be, ItemStack heldStack, Level level) {
-        if (!be.hasMetal()) return false;
-        String metalType = be.getMetalType();
-        MetalProperties metalProps = MetalUtils.getMetalProperties(metalType);
+    public static boolean fillBucketFromBlockMold(Player player, BlockMoldEntity be, ItemStack heldStack) {
+        if (!be.hasContent()) return false;
+        String metalType = be.getContent();
+        MetalProperties metalProps = ModUtils.getMetalProperties(metalType);
         if (metalProps == null) return false;
 
         Item bucketItem = ForgeRegistries.ITEMS.getValue(metalProps.bucket());
         if (bucketItem == null) return false;
         ItemStack bucketStack = new ItemStack(bucketItem);
         if (bucketItem instanceof MoltenMetalBucket) {
-            MetalUtils.setMetalToStack(bucketStack, metalType);
+            ModUtils.setContentToStack(bucketStack, metalType);
         }
 
         if (!player.getAbilities().instabuild) {
@@ -135,9 +129,35 @@ public class EntityEventsUtils {
         }
 
         // Empty the mold
-        be.removeMetal();
-        level.playSound(null, pos, SoundEvents.BUCKET_FILL_LAVA, SoundSource.BLOCKS, 1.0F, 1.0F);
+        be.removeContent();
         return true;
     }
 
+    public static boolean getGemDustFromBlockMold(Player player, BlockMoldEntity be, ItemStack heldStack) {
+        String gemName = be.getContent();
+        GemProperties gemProps = ModUtils.getGemProperties(gemName);
+        if (gemProps == null) return false;
+
+        Item dustItem = ModItems.GEM_DUST_ITEM.get();
+        ItemStack resultStack = new ItemStack(dustItem, 9);
+        ModUtils.setContentToStack(resultStack, gemName);
+
+        if (heldStack.isEmpty()) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, resultStack);
+        } else if (!player.getInventory().add(resultStack)) {
+            player.drop(resultStack, false);
+        }
+
+        be.removeContent();
+        return true;
+    }
+
+    public static boolean fillBlockMoldWithGemDust(BlockMoldEntity be, ItemStack heldStack) {
+        if (heldStack.getCount() < 9) return false;
+        String gemName = ModUtils.getContentFromStack(heldStack);
+        if (gemName == null || gemName.equals(ModData.DEFAULT_CONTENT)) return false;
+        heldStack.shrink(9);
+        be.setContent(gemName);
+        return true;
+    }
 }

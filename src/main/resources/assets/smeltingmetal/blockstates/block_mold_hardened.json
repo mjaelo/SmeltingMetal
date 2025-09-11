@@ -1,14 +1,21 @@
 {
   "variants": {
-    "has_metal=false,shape=0": { "model": "smeltingmetal:block/block_mold_shape/hardened_block" },
-    "has_metal=false,shape=1": { "model": "smeltingmetal:block/block_mold_shape/hardened_helmet" },
-    "has_metal=false,shape=2": { "model": "smeltingmetal:block/block_mold_shape/hardened_armor" },
-    "has_metal=false,shape=3": { "model": "smeltingmetal:block/block_mold_shape/hardened_pants" },
-    "has_metal=false,shape=4": { "model": "smeltingmetal:block/block_mold_shape/hardened_boots" },
-    "has_metal=true,shape=0": { "model": "smeltingmetal:block/block_mold_metal/hardened_block_metal" },
-    "has_metal=true,shape=1": { "model": "smeltingmetal:block/block_mold_metal/hardened_helmet_metal" },
-    "has_metal=true,shape=2": { "model": "smeltingmetal:block/block_mold_metal/hardened_armor_metal" },
-    "has_metal=true,shape=3": { "model": "smeltingmetal:block/block_mold_metal/hardened_pants_metal" },
-    "has_metal=true,shape=4": { "model": "smeltingmetal:block/block_mold_metal/hardened_boots_metal" }
+    "content=0,shape=0": { "model": "smeltingmetal:block/block_mold_shape/hardened_block" },
+    "content=0,shape=1": { "model": "smeltingmetal:block/block_mold_shape/hardened_helmet" },
+    "content=0,shape=2": { "model": "smeltingmetal:block/block_mold_shape/hardened_armor" },
+    "content=0,shape=3": { "model": "smeltingmetal:block/block_mold_shape/hardened_pants" },
+    "content=0,shape=4": { "model": "smeltingmetal:block/block_mold_shape/hardened_boots" },
+
+    "content=1,shape=0": { "model": "smeltingmetal:block/block_mold_metal/hardened_block_metal" },
+    "content=1,shape=1": { "model": "smeltingmetal:block/block_mold_metal/hardened_helmet_metal" },
+    "content=1,shape=2": { "model": "smeltingmetal:block/block_mold_metal/hardened_armor_metal" },
+    "content=1,shape=3": { "model": "smeltingmetal:block/block_mold_metal/hardened_pants_metal" },
+    "content=1,shape=4": { "model": "smeltingmetal:block/block_mold_metal/hardened_boots_metal" },
+
+    "content=2,shape=0": { "model": "smeltingmetal:block/block_mold_gem/hardened_block_gem" },
+    "content=2,shape=1": { "model": "smeltingmetal:block/block_mold_gem/hardened_helmet_gem" },
+    "content=2,shape=2": { "model": "smeltingmetal:block/block_mold_gem/hardened_armor_gem" },
+    "content=2,shape=3": { "model": "smeltingmetal:block/block_mold_gem/hardened_pants_gem" },
+    "content=2,shape=4": { "model": "smeltingmetal:block/block_mold_gem/hardened_boots_gem" }
   }
 }

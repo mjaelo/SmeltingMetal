@@ -1,6 +1,6 @@
 package com.smeltingmetal;
 
-import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.config.ModConfig;
 import com.smeltingmetal.init.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -8,7 +8,6 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -18,17 +17,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Main mod class for the Smelting Metal mod.
- * This class initializes all mod components, handles configuration loading,
- * and manages core mod functionality and lifecycle events.
- * TODO fix bug, where netherite item mold doesnt remove its nbt tag after cooling
- * TODO add gem processing.
- *      handle gem NBT data
- *      create gemProperties, with gem and gem block,
- *      add recipes to crush gems into gem dust item and block.
- *      right click mold or bucket with dust to fill them?
- *      item mold right click lava to get result
- *      block mold right click with lava bucket to get result
- *      how to crush gems into dust? (apart from create crushers) new tool? crafting recipe?
+ * TODO gem processing.
+ *      check grindstone compability with Spelunkery
+ * TODO address lag when opening inventory
  * TODO add custom results by editing hardened and netherite molds directly
  *      heat up molds and then print items in them? right click lava?
  *      new molds: heated hardened and netherite molds? (reddened sides)
@@ -46,7 +37,7 @@ public class SmeltingMetalMod {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         // Register config
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, MetalsConfig.CONFIG_SPEC);
+        ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, ModConfig.CONFIG_SPEC);
 
         // Register event listeners
         modEventBus.addListener(this::setup);
@@ -96,16 +87,16 @@ public class SmeltingMetalMod {
 
 
     private void onConfigReloading(ModConfigEvent.Reloading event) {
-        if (event.getConfig().getSpec() == MetalsConfig.CONFIG_SPEC) {
+        if (event.getConfig().getSpec() == ModConfig.CONFIG_SPEC) {
             LOGGER.info("Reloading Smelting Metal config...");
-            ModMetals.init();
+            ModData.init();
         }
     }
 
     private void onConfigLoaded(ModConfigEvent.Loading event) {
-        if (event.getConfig().getSpec() == MetalsConfig.CONFIG_SPEC) {
+        if (event.getConfig().getSpec() == ModConfig.CONFIG_SPEC) {
             LOGGER.info("Config loaded, initializing metals");
-            ModMetals.init();
+            ModData.init();
         }
     }
 }

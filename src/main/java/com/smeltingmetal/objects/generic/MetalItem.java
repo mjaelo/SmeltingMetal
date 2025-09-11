@@ -1,8 +1,10 @@
 package com.smeltingmetal.objects.generic;
 
 import com.smeltingmetal.data.MaterialType;
+import com.smeltingmetal.init.ModData;
+import com.smeltingmetal.objects.gem.GemDustItem;
 import com.smeltingmetal.objects.mold.ItemMold;
-import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ModUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -25,9 +27,17 @@ public class MetalItem extends Item {
         if (this instanceof ItemMold itemMold && itemMold.getMaterialType() == MaterialType.CLAY) {
             newName = Component.translatable("item.smeltingmetal.item_mold_clay").getString();
         }
-        String metalName = MetalUtils.capitalizeString(MetalUtils.getMetalTypeFromStack(stack));
-        String resultType = MetalUtils.capitalizeString(MetalUtils.getShapeFromStack(stack));
-        String replacement = this instanceof ItemMold ? metalName + " " + resultType : metalName;
+        String contentName = ModUtils.capitalizeString(ModUtils.getContentFromStack(stack));
+        String shapeName = ModUtils.capitalizeString(ModUtils.getShapeFromStack(stack));
+        boolean isDefaultContent = contentName.equals(ModUtils.capitalizeString(ModData.DEFAULT_CONTENT));
+        boolean isDefaultShape = shapeName.equals(ModUtils.capitalizeString(ModData.DEFAULT_ITEM_SHAPE));
+
+        String replacement = this instanceof ItemMold
+                ? (isDefaultContent ? "" : contentName + " ") + (isDefaultShape ? "": shapeName + " ")
+                : this instanceof GemDustItem && isDefaultContent
+                    ? ModUtils.capitalizeString(ModData.DEFAULT_GEM)
+                    : contentName;
+
         return Component.literal(newName.replace("%s", replacement));
     }
 
@@ -37,7 +47,7 @@ public class MetalItem extends Item {
         String baseKey = this.getDescriptionId() + ".tooltip";
         if (this instanceof ItemMold itemMold && itemMold.getMaterialType() == MaterialType.CLAY) {
             baseKey = "item.smeltingmetal.item_mold_clay.tooltip";
-            MetalUtils.setShapeToStack(stack, itemMold.getShape(), false);
+            ModUtils.setShapeToStack(stack, itemMold.getShape(), false);
         }
         if (Component.translatable(baseKey).getString().equals(baseKey)) {
             return; // No tooltip found

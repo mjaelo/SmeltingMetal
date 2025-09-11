@@ -1,11 +1,13 @@
 package com.smeltingmetal.utils;
 
-import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.config.ModConfig;
+import com.smeltingmetal.data.GemProperties;
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.data.MetalProperties;
 import com.smeltingmetal.init.ModBlocks;
+import com.smeltingmetal.init.ModData;
 import com.smeltingmetal.init.ModItems;
-import com.smeltingmetal.init.ModMetals;
+import com.smeltingmetal.objects.gem.GemDustItem;
 import com.smeltingmetal.objects.generic.MetalItem;
 import com.smeltingmetal.objects.mold.BlockMoldItem;
 import com.smeltingmetal.objects.mold.ItemMold;
@@ -34,18 +36,19 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.smeltingmetal.SmeltingMetalMod.LOGGER;
 
 public class ServerEventsUtils {
-    public static void handleInventoryMoltenMetal(Player player) {
+    public static void checkInventoryForMoltenMetal(Player player) {
         Level level = player.level();
         if (level.isClientSide()) return;
         for (ItemStack itemStack : player.getInventory().items) {
             Class<?> containerClass = getContainerClass(itemStack);
             if (containerClass == null) continue; // not molten item
             List<ItemStack> containerStacks = findInInventory(player, containerClass);
-            MetalProperties metalProps = MetalUtils.getMetalPropertiesFromStack(itemStack);
+            MetalProperties metalProps = ModUtils.getMetalPropertiesFromStack(itemStack);
 
             if (containerStacks.isEmpty() || metalProps == null) {
                 dropMoltenItem(player, itemStack, level);
@@ -61,7 +64,7 @@ public class ServerEventsUtils {
         return player.getInventory().items.stream()
                 .filter(stack -> itemClass.isInstance(stack.getItem()))
                 .filter(stack ->
-                        (stack.getItem() instanceof ItemMold itemMold && itemMold.getMaterialType() != MaterialType.CLAY && MetalUtils.getMetalTypeFromStack(stack).equals(ModMetals.DEFAULT_METAL))
+                        (stack.getItem() instanceof ItemMold itemMold && itemMold.getMaterialType() != MaterialType.CLAY && ModUtils.getContentFromStack(stack).equals(ModData.DEFAULT_CONTENT))
                                 || (stack.getItem() instanceof BucketItem bucket && bucket.getFluid() == Fluids.EMPTY)
                 )
                 .toList();
@@ -70,7 +73,8 @@ public class ServerEventsUtils {
     public static Class<?> getContainerClass(ItemStack itemStack) {
         boolean isMoltenItem = itemStack.getItem() instanceof MoltenMetalItem;
         boolean isMoltenBlock = itemStack.getItem() instanceof MoltenMetalBlockItem;
-        if (!isMoltenItem && !isMoltenBlock) return null;
+        if (!isMoltenItem && !isMoltenBlock) return
+                null;
         return isMoltenItem ? ItemMold.class : BucketItem.class;
     }
 
@@ -78,13 +82,13 @@ public class ServerEventsUtils {
         ItemStack newItemStack;
         if (containerStack.getItem() instanceof ItemMold itemMold && itemMold.getMaterialType() != MaterialType.CLAY) {
             newItemStack = new ItemStack(containerStack.getItem(), 1);
-            MetalUtils.setMetalToStack(newItemStack, metalProps.name());
-            MetalUtils.setShapeToStack(newItemStack, MetalUtils.getShapeFromStack(containerStack), false);
+            ModUtils.setContentToStack(newItemStack, metalProps.name());
+            ModUtils.setShapeToStack(newItemStack, ModUtils.getShapeFromStack(containerStack), false);
         } else if (containerStack.getItem() instanceof BucketItem) {
             Item bucketItem = ForgeRegistries.ITEMS.getValue(metalProps.bucket());
             if (bucketItem == null) return; // should not happen
             newItemStack = new ItemStack(bucketItem);
-            MetalUtils.setMetalToStack(newItemStack, metalProps.name());
+            ModUtils.setContentToStack(newItemStack, metalProps.name());
         } else {
             LOGGER.error("Invalid container item: " + containerStack.getItem());
             return;
@@ -97,7 +101,7 @@ public class ServerEventsUtils {
         Level level = event.getLevel();
         BlockPos pos = event.getPos().above();
 
-        ItemStack cooledStack = getCooledMetalStack(containerStack, level, pos, false);
+        ItemStack cooledStack = getCooledContentStack(containerStack, level, pos, false);
         if (cooledStack == null || cooledStack.isEmpty()) return;
 
         Player serverPlayer = event.getEntity();
@@ -106,33 +110,40 @@ public class ServerEventsUtils {
         }
     }
 
-    public static ItemStack getCooledMetalStack(ItemStack metalStack, Level level, BlockPos pos, boolean shouldCool) {
+    public static ItemStack getCooledContentStack(ItemStack contentStack, Level level, BlockPos pos, boolean shouldCool) {
         if (level.isClientSide()) return null;
-        boolean inWater = level.getBlockState(pos).is(Blocks.WATER) || level.getFluidState(pos).is(FluidTags.WATER);
-        if (!shouldCool && !inWater) return null;
+        MetalProperties metalProps = ModUtils.getMetalPropertiesFromStack(contentStack);
+        GemProperties gemProperties = ModUtils.getGemPropertiesFromStack(contentStack);
+        boolean isMetal = metalProps != null;
+        if (metalProps == null && gemProperties == null) return null;
 
-        boolean isValidMold = metalStack.getItem() instanceof ItemMold moldItem && moldItem.getMaterialType() != MaterialType.CLAY;
-        boolean isValidMoltenMetal = (metalStack.getItem() instanceof MoltenMetalItem || metalStack.getItem() instanceof MoltenMetalBlockItem);
+        boolean inFluid = level.getBlockState(pos).is(isMetal ? Blocks.WATER : Blocks.LAVA) || level.getFluidState(pos).is(isMetal ? FluidTags.WATER : FluidTags.LAVA);
+        if (!shouldCool && !inFluid) return null;
+
+        boolean isValidMold = contentStack.getItem() instanceof ItemMold moldItem && moldItem.getMaterialType() != MaterialType.CLAY;
+        boolean isValidMoltenMetal = isMetal && (contentStack.getItem() instanceof MoltenMetalItem || contentStack.getItem() instanceof MoltenMetalBlockItem);
         if (!isValidMold && !isValidMoltenMetal) return null;
-        MetalProperties metalProps = MetalUtils.getMetalPropertiesFromStack(metalStack);
-        if (metalProps == null) return null;
 
         // get result item
-        Item resultItem = isValidMold
-                ? ForgeRegistries.ITEMS.getValue(getItemResultFromMetalProp(metalStack, metalProps))
-                : ForgeRegistries.ITEMS.getValue(getRawFromMetalProp(metalStack, metalProps));
+        String shape = ModUtils.getShapeFromStack(contentStack);
+        Item resultItem = ForgeRegistries.ITEMS.getValue(isValidMold
+                ? getItemResult(
+                        shape,
+                        isMetal ? metalProps.itemResults(): gemProperties.itemResults(),
+                        isMetal ? metalProps.ingot(): gemProperties.gem())
+                : getRawFromMetalProp(contentStack, metalProps));
         if (resultItem == null || resultItem == Items.AIR) return null;
         ItemStack resultStack = new ItemStack(resultItem);
         if (resultItem instanceof MetalItem) {
-            MetalUtils.setMetalToStack(resultStack, metalProps.name());
+            ModUtils.setContentToStack(resultStack, isMetal? metalProps.name() : gemProperties.name());
         }
 
         // handle mold after cooling
         if (isValidMold) {
-            if (((ItemMold) metalStack.getItem()).getMaterialType() != MaterialType.NETHERITE) {
-                metalStack.shrink(1);
+            if (((ItemMold) contentStack.getItem()).getMaterialType() != MaterialType.NETHERITE) {
+                contentStack.shrink(1);
             } else {
-                MetalUtils.setMetalToStack(metalStack, ModMetals.DEFAULT_METAL);
+                ModUtils.setContentToStack(contentStack, ModData.DEFAULT_CONTENT);
             }
         }
 
@@ -145,23 +156,23 @@ public class ServerEventsUtils {
         return resultStack;
     }
 
-    public static boolean pourMetalBetweenItemMolds(ItemStack mainHand, ItemStack offHand, Player player) {
+    public static boolean pourContentBetweenItemMolds(ItemStack mainHand, ItemStack offHand, Player player) {
         // Check if both items are molds
         if (!(mainHand.getItem() instanceof ItemMold && offHand.getItem() instanceof ItemMold)) {
             return false;
         }
 
-        String mainHandMetal = MetalUtils.getMetalTypeFromStack(mainHand);
-        String offHandMetal = MetalUtils.getMetalTypeFromStack(offHand);
-        boolean isMainHandMoldEmpty = mainHandMetal.equals(ModMetals.DEFAULT_METAL);
-        boolean isOffHandMoldEmpty = offHandMetal.equals(ModMetals.DEFAULT_METAL);
+        String mainHandContent = ModUtils.getContentFromStack(mainHand);
+        String offHandContent = ModUtils.getContentFromStack(offHand);
+        boolean isMainHandMoldEmpty = mainHandContent.equals(ModData.DEFAULT_CONTENT);
+        boolean isOffHandMoldEmpty = offHandContent.equals(ModData.DEFAULT_CONTENT);
 
         // Only proceed if one is empty and the other is not
         if (isMainHandMoldEmpty == isOffHandMoldEmpty) return false;
 
         // Update the metal types
-        MetalUtils.setMetalToStack(mainHand, offHandMetal);
-        MetalUtils.setMetalToStack(offHand, mainHandMetal);
+        ModUtils.setContentToStack(mainHand, offHandContent);
+        ModUtils.setContentToStack(offHand, mainHandContent);
 
         // Update the player's hands
         player.setItemInHand(InteractionHand.MAIN_HAND, mainHand.copy());
@@ -171,16 +182,16 @@ public class ServerEventsUtils {
 
     public static boolean printItemIntoItemMold(ItemStack mainHand, ItemStack offHand, Player player) {
         // Check which hand is the mold
-        boolean isMainHandMold = mainHand.getItem() instanceof ItemMold && MetalUtils.getMetalTypeFromStack(mainHand).equals(ModMetals.DEFAULT_METAL);
-        boolean isOffHandMold = offHand.getItem() instanceof ItemMold && MetalUtils.getMetalTypeFromStack(offHand).equals(ModMetals.DEFAULT_METAL);
+        boolean isMainHandMold = mainHand.getItem() instanceof ItemMold && ModUtils.getContentFromStack(mainHand).equals(ModData.DEFAULT_CONTENT);
+        boolean isOffHandMold = offHand.getItem() instanceof ItemMold && ModUtils.getContentFromStack(offHand).equals(ModData.DEFAULT_CONTENT);
         if (!isMainHandMold && !isOffHandMold) return false;
 
-        String handShape = MetalUtils.getShapeKeyFromString(isMainHandMold ? offHand.getDescriptionId() : mainHand.getDescriptionId(), false);
-        if (MetalsConfig.CONFIG.blockKeywords.get().stream().anyMatch(handShape::contains)) return false;
+        String handShape = ModUtils.getShapeKeyFromString(isMainHandMold ? offHand.getDescriptionId() : mainHand.getDescriptionId(), false);
+        if (ModConfig.CONFIG.blockKeywords.get().stream().anyMatch(handShape::contains)) return false;
         Item newItem = ModItems.ITEM_MOLDS_CLAY.get(handShape).get();
         ItemStack newMainHand = isMainHandMold ? new ItemStack(newItem, mainHand.getCount()) : mainHand.copy();
         ItemStack newoffHand = isOffHandMold ? new ItemStack(newItem, offHand.getCount()) : offHand.copy();
-        MetalUtils.setShapeToStack(isMainHandMold ? newMainHand : newoffHand, handShape, false);
+        ModUtils.setShapeToStack(isMainHandMold ? newMainHand : newoffHand, handShape, false);
 
         // Update the player's hands
         player.setItemInHand(InteractionHand.MAIN_HAND, newMainHand);
@@ -190,16 +201,16 @@ public class ServerEventsUtils {
 
     public static boolean printItemIntoBlockMold(ItemStack mainHand, ItemStack offHand, Player player) {
         // Check which hand is the mold
-        boolean isMainHandMold = mainHand.getItem() instanceof BlockMoldItem mold && MetalUtils.getMetalTypeFromStack(mainHand).equals(ModMetals.DEFAULT_METAL) && mold.getMaterialType() == MaterialType.CLAY;
-        boolean isOffHandMold = offHand.getItem() instanceof BlockMoldItem mold && MetalUtils.getMetalTypeFromStack(offHand).equals(ModMetals.DEFAULT_METAL) && mold.getMaterialType() == MaterialType.CLAY;
+        boolean isMainHandMold = mainHand.getItem() instanceof BlockMoldItem mold && ModUtils.getContentFromStack(mainHand).equals(ModData.DEFAULT_CONTENT) && mold.getMaterialType() == MaterialType.CLAY;
+        boolean isOffHandMold = offHand.getItem() instanceof BlockMoldItem mold && ModUtils.getContentFromStack(offHand).equals(ModData.DEFAULT_CONTENT) && mold.getMaterialType() == MaterialType.CLAY;
         if (!isMainHandMold && !isOffHandMold) return false;
 
-        String handShape = MetalUtils.getShapeKeyFromString(isMainHandMold ? offHand.getDescriptionId() : mainHand.getDescriptionId(), true);
-        if (MetalsConfig.CONFIG.blockKeywords.get().stream().anyMatch(handShape::contains)) return false;
+        String handShape = ModUtils.getShapeKeyFromString(isMainHandMold ? offHand.getDescriptionId() : mainHand.getDescriptionId(), true);
+        if (ModConfig.CONFIG.blockKeywords.get().stream().anyMatch(handShape::contains)) return false;
         Item newItem = ModBlocks.BLOCK_MOLDS_CLAY.get(handShape).get();
         ItemStack newMainHand = isMainHandMold ? new ItemStack(newItem, mainHand.getCount()) : mainHand.copy();
         ItemStack newoffHand = isOffHandMold ? new ItemStack(newItem, offHand.getCount()) : offHand.copy();
-        MetalUtils.setShapeToStack(isMainHandMold ? newMainHand : newoffHand, handShape, true);
+        ModUtils.setShapeToStack(isMainHandMold ? newMainHand : newoffHand, handShape, true);
 
         // Update the player's hands
         player.setItemInHand(InteractionHand.MAIN_HAND, newMainHand);
@@ -207,18 +218,44 @@ public class ServerEventsUtils {
         return true;
     }
 
+    public static boolean putGemDustIntoMold(ItemStack mainHand, ItemStack offHand, Player player) {
+        // Check which hand is the mold
+        boolean isMainHandMold = (mainHand.getItem() instanceof ItemMold || mainHand.getItem() instanceof BlockMoldItem) && ModUtils.getContentFromStack(mainHand).equals(ModData.DEFAULT_CONTENT);
+        boolean isOffHandMold = (offHand.getItem() instanceof ItemMold || offHand.getItem() instanceof BlockMoldItem) && ModUtils.getContentFromStack(offHand).equals(ModData.DEFAULT_CONTENT);
+        if (isMainHandMold == isOffHandMold) return false;
+        boolean isMainHandGemDust = mainHand.getItem() instanceof GemDustItem;
+        boolean isOffHandGemDust = offHand.getItem() instanceof GemDustItem;
+        if (isMainHandGemDust == isOffHandGemDust) return false;
+
+        String gemName = isMainHandGemDust ? ModUtils.getContentFromStack(mainHand) : ModUtils.getContentFromStack(offHand);
+        if (gemName.equals(ModData.DEFAULT_CONTENT)) return false;
+
+        int requiredCount = isMainHandMold
+                ? mainHand.getItem() instanceof ItemMold ? 1 : 9
+                : offHand.getItem() instanceof ItemMold ? 1 : 9;
+        if (isMainHandGemDust
+                ? mainHand.getCount() < requiredCount
+                : offHand.getCount() < requiredCount) return false;
+        (isMainHandGemDust ? mainHand : offHand).shrink(requiredCount);
+        ModUtils.setContentToStack(isMainHandMold ? mainHand : offHand, gemName);
+
+        // Update the player's hands
+        player.setItemInHand(InteractionHand.MAIN_HAND, mainHand);
+        player.setItemInHand(InteractionHand.OFF_HAND, offHand);
+        return true;
+    }
+
     private static ResourceLocation getRawFromMetalProp(ItemStack metalStack, MetalProperties metalProps) {
         return metalStack.getItem() instanceof MoltenMetalItem ? metalProps.raw() : metalProps.rawBlock();
     }
 
-    private static ResourceLocation getItemResultFromMetalProp(ItemStack metalStack, MetalProperties metalProps) {
-        String resultType = MetalUtils.getShapeFromStack(metalStack);
-        ResourceLocation result = metalProps.itemResults().get(resultType);
-        return result != null ? result : metalProps.ingot();
+    public static ResourceLocation getItemResult(String shape, Map<String, ResourceLocation> itemResults, ResourceLocation defaultResult) {
+        ResourceLocation result = itemResults.get(shape);
+        return result != null ? result : defaultResult;
     }
 
     private static void dropMoltenItem(Player player, ItemStack stack, Level level) {
-        MetalProperties metalProperties = MetalUtils.getMetalPropertiesFromStack(stack);
+        MetalProperties metalProperties = ModUtils.getMetalPropertiesFromStack(stack);
 
         // if fluid is found, place it, otherwise drop it as an item
         if (stack.getItem() instanceof MoltenMetalBlockItem && metalProperties.moltenFluid() != null) {

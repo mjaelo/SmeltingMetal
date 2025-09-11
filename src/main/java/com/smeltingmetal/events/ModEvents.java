@@ -2,11 +2,13 @@ package com.smeltingmetal.events;
 
 import com.mojang.logging.LogUtils;
 import com.smeltingmetal.SmeltingMetalMod;
+import com.smeltingmetal.config.ModConfig;
 import com.smeltingmetal.data.MetalProperties;
-import com.smeltingmetal.init.ModMetals;
+import com.smeltingmetal.init.ModData;
+import com.smeltingmetal.init.ModItems;
 import com.smeltingmetal.recipes.RecipeProcessor;
 import com.smeltingmetal.recipes.RecipeReloadListener;
-import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ModUtils;
 import com.smeltingmetal.utils.ServerEventsUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -15,6 +17,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
@@ -46,7 +49,7 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(ModMetals::init);
+        event.enqueueWork(ModData::init);
     }
 
     @Mod.EventBusSubscriber(modid = SmeltingMetalMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -87,8 +90,8 @@ public class ModEvents {
             if (containerClass == null) return; // not molten item
 
             List<ItemStack> containerStacks = ServerEventsUtils.findInInventory(player, containerClass);
-            String metalType = MetalUtils.getMetalTypeFromStack(itemStack);
-            MetalProperties metalProps = MetalUtils.getMetalProperties(metalType);
+            String metalType = ModUtils.getContentFromStack(itemStack);
+            MetalProperties metalProps = ModUtils.getMetalProperties(metalType);
 
             if (containerStacks.isEmpty() || metalProps == null) {
                 player.hurt(player.damageSources().lava(), 4f);
@@ -115,7 +118,8 @@ public class ModEvents {
             ItemStack mainHand = player.getMainHandItem();
             ItemStack offHand = player.getOffhandItem();
 
-            if (!ServerEventsUtils.pourMetalBetweenItemMolds(mainHand, offHand, player)
+            if (!ServerEventsUtils.pourContentBetweenItemMolds(mainHand, offHand, player)
+                    && !ServerEventsUtils.putGemDustIntoMold(mainHand, offHand, player)
                     && !ServerEventsUtils.printItemIntoItemMold(mainHand, offHand, player)
                     && !ServerEventsUtils.printItemIntoBlockMold(mainHand, offHand, player))
                 return;
@@ -129,7 +133,7 @@ public class ModEvents {
 
         @SubscribeEvent
         public static void onContainerClose(PlayerContainerEvent.Close event) {
-            ServerEventsUtils.handleInventoryMoltenMetal(event.getEntity());
+            ServerEventsUtils.checkInventoryForMoltenMetal(event.getEntity());
         }
 
         @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -143,7 +147,32 @@ public class ModEvents {
             if (clickedBlockId != null && createName.equals(clickedBlockId.getNamespace()) && "depot".equals(clickedBlockId.getPath())) {
                 MinecraftServer server = level.getServer();
                 if (server != null) { // add delay to execute after create processes
-                    server.tell(new TickTask(server.getTickCount() + 1, () -> ServerEventsUtils.handleInventoryMoltenMetal(event.getEntity())));
+                    server.tell(new TickTask(server.getTickCount() + 1, () -> ServerEventsUtils.checkInventoryForMoltenMetal(event.getEntity())));
+                }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onGrindstoneRightClick(PlayerInteractEvent.RightClickBlock event) {
+            if (event.getLevel().isClientSide()) return;
+            if (event.getLevel().getBlockState(event.getPos()).is(Blocks.GRINDSTONE)) {
+                Player player = event.getEntity();
+                ItemStack mainHandItem = player.getMainHandItem();
+
+                String itemName = mainHandItem.getItem().getDescriptionId();
+                String gemName = ModData.getGemPropertiesMap().keySet().stream()
+                        .filter(itemName::contains)
+                        .findFirst()
+                        .orElse(null);
+                if (gemName != null) {
+                    boolean isBlock = ModConfig.CONFIG.blockKeywords.get().stream().anyMatch(itemName::contains);
+                    mainHandItem.shrink(1);
+                    ItemStack dustStack = new ItemStack(ModItems.GEM_DUST_ITEM.get(), isBlock ? 9 : 1);
+                    ModUtils.setContentToStack(dustStack, gemName);
+                    if (!player.addItem(dustStack)) {
+                        player.drop(dustStack, false);
+                    }
+                    event.setCanceled(true);
                 }
             }
         }

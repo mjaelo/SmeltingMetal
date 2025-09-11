@@ -1,7 +1,8 @@
 package com.smeltingmetal.objects.generic;
 
+import com.smeltingmetal.init.ModData;
 import com.smeltingmetal.objects.mold.BlockMoldItem;
-import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ModUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -23,12 +24,13 @@ public class MetalBlockItem extends BlockItem {
         String newName = originalName.getString();
         if (this instanceof BlockMoldItem itemMold && itemMold.getShape() != null) {
             newName = Component.translatable("block.smeltingmetal.block_mold_clay").getString();
-            MetalUtils.setShapeToStack(stack, itemMold.getShape(), true);
+            ModUtils.setShapeToStack(stack, itemMold.getShape(), true);
         }
-        String metalName = MetalUtils.capitalizeString(MetalUtils.getMetalTypeFromStack(stack));
-        String resultType = MetalUtils.capitalizeString(MetalUtils.getShapeFromStack(stack));
+        String contentName = ModUtils.capitalizeString(ModUtils.getContentFromStack(stack));
+        String resultType = ModUtils.capitalizeString(ModUtils.getShapeFromStack(stack));
+        boolean isDefaultContent = contentName.equals(ModUtils.capitalizeString(ModData.DEFAULT_CONTENT));
         return Component.literal(newName.replace(
-                "Block", metalName + " " + resultType
+                "Block", (isDefaultContent ? "": contentName + " ") + resultType
         ));
     }
 

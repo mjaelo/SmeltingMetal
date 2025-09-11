@@ -2,7 +2,8 @@ package com.smeltingmetal.objects.mold;
 
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.init.ModBlockEntities;
-import com.smeltingmetal.init.ModMetals;
+import com.smeltingmetal.init.ModData;
+import com.smeltingmetal.utils.ModUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -13,8 +14,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockMoldEntity extends BlockEntity {
-    private String shapeType = "";
-    private String metalType = "";
+    private String shape = "";
+    private String content = "";
 
     public BlockMoldEntity(BlockPos pPos, BlockState pBlockState) {
         super(ModBlockEntities.BLOCK_MOLD_BE.get(), pPos, pBlockState);
@@ -32,46 +33,36 @@ public class BlockMoldEntity extends BlockEntity {
         return MaterialType.CLAY; // Default fallback
     }
 
-    public boolean hasMetal() {
-        return !metalType.isEmpty();
-    }
-
-    public String getMetalType() {
-        return metalType;
-    }
-
-    public String getShapeType() {
-        return shapeType;
+    public String getShape() {
+        return shape;
     }
     
-    public int getShapeIndex() {
-        return switch (shapeType) {
-            case "helmet" -> 1;
-            case "armor" -> 2;
-            case "pants" -> 3;
-            case "boots" -> 4;
-            default -> 0; // block
-        };
-    }
-    
-    public void setShapeType(String shapeType) {
-        this.shapeType = shapeType;
+    public void setShape(String shape) {
+        this.shape = shape;
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
-    public void fill(String metalType) {
-        this.metalType = metalType;
+    public String getContent() {
+        return content;
+    }
+
+    public int getContentType() {
+        return ModUtils.getContentId(content);
+    }
+
+    public void setContent(String content) {
+        this.content = content;
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
-    public void removeMetal() {
-        this.metalType = "";
+    public void removeContent() {
+        this.content = "";
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -82,15 +73,15 @@ public class BlockMoldEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putString(ModMetals.METAL_KEY, metalType);
-        tag.putString(ModMetals.SHAPE_KEY, shapeType);
+        tag.putString(ModData.CONTENT_KEY, content);
+        tag.putString(ModData.SHAPE_KEY, shape);
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        this.metalType = tag.getString(ModMetals.METAL_KEY);
-        this.shapeType = tag.contains(ModMetals.SHAPE_KEY) ? tag.getString(ModMetals.SHAPE_KEY) : "";
+        this.content = tag.getString(ModData.CONTENT_KEY);
+        this.shape = tag.contains(ModData.SHAPE_KEY) ? tag.getString(ModData.SHAPE_KEY) : "";
     }
 
     @Override
@@ -103,5 +94,9 @@ public class BlockMoldEntity extends BlockEntity {
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    public boolean hasContent() {
+        return !content.isEmpty();
     }
 }

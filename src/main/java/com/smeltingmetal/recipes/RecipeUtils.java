@@ -1,7 +1,7 @@
 package com.smeltingmetal.recipes;
 
 import com.mojang.logging.LogUtils;
-import com.smeltingmetal.config.MetalsConfig;
+import com.smeltingmetal.config.ModConfig;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -79,7 +79,7 @@ public class RecipeUtils {
             ResourceLocation rid = ForgeRegistries.ITEMS.getKey(st.getItem());
             if (rid == null) continue;
             String p = rid.getPath().toLowerCase();
-            for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
+            for (String bad : ModConfig.CONFIG.blacklistKeywords.get()) {
                 if (p.contains(bad)) {
                     return false;
                 }
@@ -90,18 +90,14 @@ public class RecipeUtils {
 
     public static @Nullable ResourceLocation getRecipeResultLocation(RegistryAccess registryAccess, Recipe<?> recipe) {
         ItemStack resultStack = recipe.getResultItem(registryAccess);
-        if (resultStack.isEmpty()) {
-            return null;
-        }
-
-        ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(resultStack.getItem());
-        return resultId;
+        if (resultStack.isEmpty()) return null;
+        return ForgeRegistries.ITEMS.getKey(resultStack.getItem());
     }
 
     public static boolean isItemNotBlacklisted(ResourceLocation rid) {
         if (rid == null) return true;
         String p = rid.getPath().toLowerCase();
-        for (String bad : MetalsConfig.CONFIG.blacklistKeywords.get()) {
+        for (String bad : ModConfig.CONFIG.blacklistKeywords.get()) {
             if (p.contains(bad)) {
                 return false;
             }

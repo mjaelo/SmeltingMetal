@@ -35,7 +35,6 @@ public class ModItems {
             event.accept(MOLTEN_METAL_ITEM);
             event.accept(MOLTEN_METAL_BUCKET);
             event.accept(ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get());
-            event.accept(ModBlocks.GEM_DUST_BLOCK_ITEM.get());
         }
     }
 
@@ -43,7 +42,7 @@ public class ModItems {
 
     public static Map<String, RegistryObject<Item>> registerItemMoldShapes() {
         Map<String, RegistryObject<Item>> itemMolds = new HashMap<>();
-        for (String shape : ModMetals.DEFAULT_ITEM_SHAPES) {
+        for (String shape : ModData.DEFAULT_ITEM_SHAPES) {
             itemMolds.put(shape, ITEMS.register("item_mold_empty/clay_" + shape,
                     () -> new ItemMold(new Item.Properties(), MaterialType.CLAY, shape)));
         }
@@ -52,7 +51,7 @@ public class ModItems {
 
 
     // Mold items
-    public static final RegistryObject<Item> ITEM_MOLD_CLAY = ITEM_MOLDS_CLAY.get(ModMetals.DEFAULT_ITEM_SHAPE);
+    public static final RegistryObject<Item> ITEM_MOLD_CLAY = ITEM_MOLDS_CLAY.get(ModData.DEFAULT_ITEM_SHAPE);
     
     public static final RegistryObject<Item> ITEM_MOLD_HARDENED = ITEMS.register("item_mold_hardened",
             () -> new ItemMold(new Item.Properties(),  MaterialType.HARDENED));
@@ -68,7 +67,7 @@ public class ModItems {
             () -> new MoltenMetalBucket(new Item.Properties().stacksTo(1)));
 
     public static final RegistryObject<Item> GEM_DUST_ITEM = ITEMS.register("gem_dust_item",
-            () -> new GemDustItem(new Item.Properties().stacksTo(1)));
+            () -> new GemDustItem(new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

@@ -2,12 +2,16 @@ package com.smeltingmetal.objects.mold;
 
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.data.MetalProperties;
-import com.smeltingmetal.init.ModMetals;
+import com.smeltingmetal.init.ModData;
+import com.smeltingmetal.objects.gem.GemDustItem;
 import com.smeltingmetal.objects.molten.MoltenMetalBucket;
 import com.smeltingmetal.utils.EntityEventsUtils;
-import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ModUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +25,6 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -32,19 +35,19 @@ import net.minecraftforge.registries.ForgeRegistries;
 import java.util.List;
 
 public class BlockMold extends Block implements EntityBlock {
-    public static final BooleanProperty HAS_METAL = BooleanProperty.create(ModMetals.METAL_KEY);
-    public static final IntegerProperty SHAPE = IntegerProperty.create(ModMetals.SHAPE_KEY, 0, 4);
+    public static final IntegerProperty CONTENT = IntegerProperty.create(ModData.CONTENT_KEY, 0, 2);
+    public static final IntegerProperty SHAPE = IntegerProperty.create(ModData.SHAPE_KEY, 0, 4);
     private final MaterialType materialType;
 
     public BlockMold(Properties properties, MaterialType materialType) {
         super(properties);
         this.materialType = materialType;
-        this.registerDefaultState(this.stateDefinition.any().setValue(HAS_METAL, false).setValue(SHAPE, 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(CONTENT, 0).setValue(SHAPE, 0));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HAS_METAL, SHAPE);
+        builder.add(CONTENT, SHAPE);
     }
 
     @Override
@@ -59,21 +62,21 @@ public class BlockMold extends Block implements EntityBlock {
         // Get the block entity and set its shape from the item's NBT
         if (level.getBlockEntity(pos) instanceof BlockMoldEntity blockEntity) {
             CompoundTag tag = stack.getTag();
-            if (tag != null && tag.contains(ModMetals.SHAPE_KEY)) {
-                String shape = tag.getString(ModMetals.SHAPE_KEY);
-                blockEntity.setShapeType(shape);
+            if (tag != null && tag.contains(ModData.SHAPE_KEY)) {
+                String shape = tag.getString(ModData.SHAPE_KEY);
+                blockEntity.setShape(shape);
 
                 // Update block state to match the shape
-                int shapeIndex = blockEntity.getShapeIndex();
+                int shapeIndex = ModUtils.getItemShapeId(blockEntity.getShape());
                 level.setBlock(pos, state.setValue(SHAPE, shapeIndex), 3);
             }
 
             // Also handle metal type if present
-            if (tag != null && tag.contains(ModMetals.METAL_KEY)) {
-                String metalType = tag.getString(ModMetals.METAL_KEY);
+            if (tag != null && tag.contains(ModData.CONTENT_KEY)) {
+                String metalType = tag.getString(ModData.CONTENT_KEY);
                 if (!metalType.isEmpty()) {
-                    blockEntity.fill(metalType);
-                    level.setBlock(pos, state.setValue(HAS_METAL, true), 3);
+                    blockEntity.setContent(metalType);
+                    level.setBlock(pos, state.setValue(CONTENT, 1), 3);
                 }
             }
         }
@@ -111,12 +114,12 @@ public class BlockMold extends Block implements EntityBlock {
 
         if (blockEntity instanceof BlockMoldEntity be) {
             // Only set shape if it's not empty
-            if (!be.getShapeType().isEmpty()) {
-                MetalUtils.setShapeToStack(stack, be.getShapeType(), true);
+            if (!be.getShape().isEmpty()) {
+                ModUtils.setShapeToStack(stack, be.getShape(), true);
             }
             // Only set metal if it's not empty
-            if (!be.getMetalType().isEmpty()) {
-                MetalUtils.setMetalToStack(stack, be.getMetalType());
+            if (!be.getContent().isEmpty()) {
+                ModUtils.setContentToStack(stack, be.getContent());
             }
         }
 
@@ -126,36 +129,53 @@ public class BlockMold extends Block implements EntityBlock {
     public boolean onRightClickBlockMold(BlockPos pos, Player player, BlockMoldEntity be, ItemStack heldStack) {
         Level level = player.level();
         boolean result = false;
+        SoundEvent sound = null;
 
         if (heldStack.getItem() instanceof MoltenMetalBucket) {
-            MetalProperties metalProps = MetalUtils.getMetalPropertiesFromStack(heldStack);
+            MetalProperties metalProps = ModUtils.getMetalPropertiesFromStack(heldStack);
             if (metalProps != null) {
-                result = EntityEventsUtils.fillBlockMold(level, pos, player, be, heldStack, metalProps.name());
+                result = EntityEventsUtils.fillBlockMold( player, be, heldStack, metalProps.name());
+                sound = SoundEvents.BUCKET_EMPTY_LAVA;
             }
         } else if (heldStack.getItem() instanceof BucketItem bucketItem) {
             if (bucketItem.getFluid() == Fluids.EMPTY) {
-                result = EntityEventsUtils.fillBucketFromBlockMold(pos, player, be, heldStack, level);
-            } else if (bucketItem.getFluid() == Fluids.WATER) {
+                result = EntityEventsUtils.fillBucketFromBlockMold(player, be, heldStack);
+                sound = SoundEvents.BUCKET_FILL_LAVA;
+            } else if (be.getContentType() == 1 && bucketItem.getFluid() == Fluids.WATER) {
                 result = EntityEventsUtils.coolBlockMold(pos, player, be, heldStack, level);
-            } else {
-                for (MetalProperties metalProps : MetalUtils.getAllMetalProperties().values()) {
+                sound = SoundEvents.GENERIC_EXTINGUISH_FIRE;
+            } else if (be.getContentType() == 2 && bucketItem.getFluid() == Fluids.LAVA) {
+                result = EntityEventsUtils.coolBlockMold(pos, player, be, heldStack, level);
+                sound = SoundEvents.GENERIC_EXTINGUISH_FIRE;
+            } else if (!be.hasContent()) {
+                for (MetalProperties metalProps : ModUtils.getAllMetalProperties().values()) {
                     Item bucket = ForgeRegistries.ITEMS.getValue(metalProps.bucket());
                     if (bucket == bucketItem) {
-                        result = EntityEventsUtils.fillBlockMold(level, pos, player, be, heldStack, metalProps.name());
+                        result = EntityEventsUtils.fillBlockMold(player, be, heldStack, metalProps.name());
+                        sound = SoundEvents.BUCKET_EMPTY_LAVA;
                         break;
                     }
                 }
             }
+        } else if (heldStack.getItem() instanceof GemDustItem && !be.hasContent()) {
+            result = EntityEventsUtils.fillBlockMoldWithGemDust(be, heldStack);
+            sound = SoundEvents.SAND_PLACE;
+        } else if (heldStack.isEmpty() && be.getContentType() == 2) {
+            result = EntityEventsUtils.getGemDustFromBlockMold(player, be, heldStack);
+            sound = SoundEvents.SAND_BREAK;
         }
 
         // Update block state after any interaction
         if (result && !level.isClientSide) {
+            if (sound != null) {
+                level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
+            }
             BlockState currentState = level.getBlockState(pos);
-            boolean hasMetal = be.hasMetal();
-            int shape = be.getShapeIndex();
+            int content = ModUtils.getContentId(be.getContent());
+            int shape = ModUtils.getBlockShapeId(be.getShape());
 
-            if (currentState.getValue(HAS_METAL) != hasMetal || currentState.getValue(SHAPE) != shape) {
-                level.setBlock(pos, currentState.setValue(HAS_METAL, hasMetal).setValue(SHAPE, shape), 3);
+            if (currentState.getValue(CONTENT) != content || currentState.getValue(SHAPE) != shape) {
+                level.setBlock(pos, currentState.setValue(CONTENT, content).setValue(SHAPE, shape), 3);
             }
         }
 

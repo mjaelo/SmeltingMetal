@@ -1,16 +1,18 @@
 package com.smeltingmetal.objects.mold;
 
 import com.smeltingmetal.data.MaterialType;
-import com.smeltingmetal.init.ModMetals;
+import com.smeltingmetal.init.ModData;
 import com.smeltingmetal.objects.generic.MetalItem;
 import com.smeltingmetal.utils.EntityEventsUtils;
-import com.smeltingmetal.utils.MetalUtils;
+import com.smeltingmetal.utils.ModUtils;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
+
+import static com.smeltingmetal.SmeltingMetalMod.MODID;
 
 public class ItemMold extends MetalItem {
     private final MaterialType materialType;
@@ -33,25 +35,17 @@ public class ItemMold extends MetalItem {
 
     private void registerItemProperties() {
         ItemProperties.register(this,
-                new ResourceLocation("smeltingmetal", "has_metal"),
+                new ResourceLocation(MODID, ModData.CONTENT_KEY),
                 (stack, level, entity, seed) -> {
-                    String metalType = MetalUtils.getMetalTypeFromStack(stack);
-                    return metalType.equals(ModMetals.DEFAULT_METAL) ? 0.0F : 1.0F;
+                    String content = ModUtils.getContentFromStack(stack);
+                    return ModUtils.getContentId(content);
                 });
 
         ItemProperties.register(this,
-                new ResourceLocation("smeltingmetal", "shape"),
+                new ResourceLocation(MODID, ModData.SHAPE_KEY),
                 (stack, level, entity, seed) -> {
-                    String shape = this.shape != null ? this.shape : MetalUtils.getShapeFromStack(stack);
-                    return switch (shape) {
-                        case "ingot" -> 0.0f;
-                        case "axe" -> 1.0f;
-                        case "pickaxe" -> 2.0f;
-                        case "shovel" -> 3.0f;
-                        case "sword" -> 4.0f;
-                        case "hoe" -> 5.0f;
-                        default -> 0.0f; // Default to ingot shape (0.0)
-                    };
+                    String shape = this.shape != null ? this.shape : ModUtils.getShapeFromStack(stack);
+                    return ModUtils.getItemShapeId(shape);
                 });
     }
 
