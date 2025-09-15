@@ -42,7 +42,7 @@ public class ModConfig {
                     .push("metals");
 
             // Default metal definitions
-            List<String> defaultMetals = List.of("iron", "gold", "copper", "netherite");
+            List<String> defaultMetals = List.of("iron,color=b9835f", "gold,color=fbeb2e", "copper,color=e97b53", "netherite,color=5d342c");
             metalDefinitions = builder
                     .comment("List of base metal names to be processed (e.g., iron, gold, tin).")
                     .defineList(
@@ -52,7 +52,7 @@ public class ModConfig {
                     );
 
             // Default gem definitions
-            List<String> defaultGems = List.of("diamond");
+            List<String> defaultGems = List.of("diamond,color=B0FFFF");
             gemDefinitions = builder
                     .comment("List of base gem names to be processed (e.g., diamond, emerald, ruby, sapphire).")
                     .defineList(
@@ -74,7 +74,7 @@ public class ModConfig {
                     .defineList("block_result_definitions", defaultBlockResults, obj -> obj instanceof String);
 
             // Blacklist keywords for items that should not be processed
-            List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template");
+            List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template", "shard");
             blacklistKeywords = builder
                     .comment("List of keywords to blacklist from processing. Any item containing these strings in its name will be skipped from both melting and Create crushing recipes.")
                     .defineList("blacklist_keywords", defaultBlacklist, obj -> true);

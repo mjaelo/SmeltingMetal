@@ -29,6 +29,7 @@ public record MetalProperties(
     ResourceLocation bucket,
     ResourceLocation moltenFluid,
     Map<String, ResourceLocation> itemResults,
-    Map<String, ResourceLocation> blockResults
+    Map<String, ResourceLocation> blockResults,
+    int color
 ) {
 }

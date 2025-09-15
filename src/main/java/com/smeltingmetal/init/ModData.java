@@ -33,6 +33,8 @@ public class ModData {
     public static final String SHAPE_KEY = "shape";
     public static final String DEFAULT_ITEM_SHAPE = "ingot";
     public static final String DEFAULT_BLOCK_SHAPE = "block";
+    public static final int DEFAULT_COLOR = 0xFFFFFF;
+
 
     public static void init() {
         if (initialized) {
@@ -114,6 +116,7 @@ public class ModData {
         String crushedPath = "crushed_raw_" + metalName;
         String bucketPath = "molten_" + metalName + "_bucket";
         String moltenFluidPath = "molten_" + metalName;
+        int color = DEFAULT_COLOR;
 
         // Create maps to store item and block results
         Map<String, ResourceLocation> itemResults = new HashMap<>();
@@ -137,6 +140,7 @@ public class ModData {
                     case "crushed" -> crushedPath = value;
                     case "bucket" -> bucketPath = value;
                     case "molten_fluid" -> moltenFluidPath = value;
+                    case "color" -> color = Integer.parseInt(value, 16);
                     default -> LOGGER.warn("Unknown property '{}' for metal '{}'", key, metalName);
                 }
             }
@@ -162,7 +166,7 @@ public class ModData {
 
         // Create MetalProperties with both item and block results
         MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget,
-                crushed, bucket, moltenFluid, itemResults, blockResults);
+                crushed, bucket, moltenFluid, itemResults, blockResults, color);
         METAL_PROPERTIES_MAP.put(metalName, properties);
         LOGGER.info("Created MetalProperties for metal: {}", metalName);
     }
@@ -173,6 +177,7 @@ public class ModData {
         if (gemName.contains(":")) {
             gemName = gemName.substring(gemName.indexOf(':') + 1);
         }
+        int color = DEFAULT_COLOR;
 
         // Default values
         String gemPath = gemName;
@@ -194,6 +199,7 @@ public class ModData {
                 switch (key) {
                     case "gem" -> gemPath = value;
                     case "block" -> blockPath = value;
+                    case "color" -> color = Integer.parseInt(value, 16);
                     default -> LOGGER.warn("Unknown property '{}' for gem '{}'", key, gemName);
                 }
             }
@@ -208,7 +214,7 @@ public class ModData {
             return;
         }
 
-        GemProperties properties = new GemProperties(gemName, gem, block, itemResults, blockResults);
+        GemProperties properties = new GemProperties(gemName, gem, block, itemResults, blockResults, color);
         GEM_PROPERTIES_MAP.put(gemName, properties);
         LOGGER.info("Created GemProperties for gem: {}", gemName);
     }

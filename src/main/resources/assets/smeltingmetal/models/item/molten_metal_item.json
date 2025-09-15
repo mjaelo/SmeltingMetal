@@ -1,6 +1,7 @@
 {
  "parent": "item/generated",
  "textures": {
-  "layer0": "smeltingmetal:item/molten_metal_item"
+  "layer0": "smeltingmetal:item/molten_metal_item",
+  "layer1": "smeltingmetal:item/metal_shine"
  }
 }

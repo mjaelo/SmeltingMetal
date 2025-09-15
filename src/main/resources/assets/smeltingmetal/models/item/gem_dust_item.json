@@ -1,6 +1,7 @@
 {
  "parent": "item/generated",
  "textures": {
-  "layer0": "smeltingmetal:item/gem_dust_item"
+  "layer0": "smeltingmetal:item/gem_dust_item",
+  "layer1": "smeltingmetal:item/gem_dust_white"
  }
 }

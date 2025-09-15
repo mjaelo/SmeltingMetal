@@ -19,6 +19,7 @@ public record GemProperties(
     ResourceLocation gem,
     ResourceLocation block,
     Map<String, ResourceLocation> itemResults,
-    Map<String, ResourceLocation> blockResults
+    Map<String, ResourceLocation> blockResults,
+    int color
 ) {
 }

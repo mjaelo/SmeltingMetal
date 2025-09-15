@@ -17,13 +17,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Main mod class for the Smelting Metal mod.
- * TODO gem processing.
- *      check grindstone compability with Spelunkery
  * TODO address lag when opening inventory
- * TODO add custom results by editing hardened and netherite molds directly
- *      heat up molds and then print items in them? right click lava?
- *      new molds: heated hardened and netherite molds? (reddened sides)
- *      after right clicking item with a heated mold, it becomes cooled?
+ * TODO add custom results by hardening clay molds in a way that keeps nbt
  */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {
