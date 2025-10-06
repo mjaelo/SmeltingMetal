@@ -82,11 +82,15 @@ public class ModUtils {
         tag.putString(tagKey, tagValue);
     }
 
-    public static String getContentKeyFromString(String path) {
+    public static String getContentKeyFromAllowedString(String path) {
         String pathLower = path.toLowerCase();
         for (String bad : ModConfig.CONFIG.blacklistKeywords.get()) {
             if (pathLower.contains(bad)) return null;
         }
+        return getContentKeyFromString(pathLower);
+    }
+
+    public static String getContentKeyFromString(String pathLower) {
         for (String metalKey : getAllMetalProperties().keySet()) {
             String keyName = metalKey.contains(":") ? metalKey.split(":")[1] : metalKey;
             if (pathLower.contains(keyName.toLowerCase())) return metalKey;

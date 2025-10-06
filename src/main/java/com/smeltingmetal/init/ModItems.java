@@ -4,6 +4,7 @@ import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.objects.mold.ItemMold;
 import com.smeltingmetal.objects.gem.GemDustItem;
+import com.smeltingmetal.objects.molten.MoltenMetalBlock;
 import com.smeltingmetal.objects.molten.MoltenMetalBucket;
 import com.smeltingmetal.objects.molten.MoltenMetalItem;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -34,7 +35,7 @@ public class ModItems {
             event.accept(GEM_DUST_ITEM);
             event.accept(MOLTEN_METAL_ITEM);
             event.accept(MOLTEN_METAL_BUCKET);
-            event.accept(ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get());
+            event.accept(MOLTEN_METAL_BLOCK);
         }
     }
 
@@ -65,6 +66,11 @@ public class ModItems {
 
     public static final RegistryObject<Item> MOLTEN_METAL_BUCKET = ITEMS.register("molten_metal_bucket",
             () -> new MoltenMetalBucket(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> MOLTEN_METAL_BLOCK = ITEMS.register("molten_metal_block",
+            () -> new MoltenMetalBlock(new Item.Properties().stacksTo(1)));
+
+    // gem dust
 
     public static final RegistryObject<Item> GEM_DUST_ITEM = ITEMS.register("gem_dust_item",
             () -> new GemDustItem(new Item.Properties()));

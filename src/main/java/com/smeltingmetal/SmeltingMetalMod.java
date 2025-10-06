@@ -17,8 +17,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Main mod class for the Smelting Metal mod.
- * TODO address lag when opening inventory
- * TODO add custom results by hardening clay molds in a way that keeps nbt
+ * TODO add metal/gem item cooling fail chance? to reduse exploitation by f.e. repairing unenchanted items? maybe crush into nuggets instead?
+ * TODO add custom results by hardening clay molds in a way that keeps nbt.
+ *      hardened is just set it on fire, netherite set it on soul fire? thats something i guess
  */
 @Mod(SmeltingMetalMod.MODID)
 public class SmeltingMetalMod {

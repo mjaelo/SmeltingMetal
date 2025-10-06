@@ -1,3 +1,7 @@
 {
- "parent": "smeltingmetal:block/molten_metal_block"
+ "parent": "item/generated",
+ "textures": {
+  "layer0": "smeltingmetal:item/molten_metal_block",
+  "layer1": "smeltingmetal:item/metal_block_shine"
+ }
 }

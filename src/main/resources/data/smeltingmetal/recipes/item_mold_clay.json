@@ -11,7 +11,7 @@
     }
   },
   "result": {
-    "item": "smeltingmetal:item_mold/clay_ingot",
+    "item": "smeltingmetal:item_mold_empty/clay_ingot",
     "count": 4
   }
 }

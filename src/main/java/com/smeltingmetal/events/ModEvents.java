@@ -13,6 +13,8 @@ import com.smeltingmetal.utils.ServerEventsUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.TickTask;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -154,8 +156,9 @@ public class ModEvents {
 
         @SubscribeEvent
         public static void onGrindstoneRightClick(PlayerInteractEvent.RightClickBlock event) {
-            if (event.getLevel().isClientSide()) return;
-            if (event.getLevel().getBlockState(event.getPos()).is(Blocks.GRINDSTONE)) {
+            Level level = event.getLevel();
+            if (level.isClientSide()) return;
+            if (level.getBlockState(event.getPos()).is(Blocks.GRINDSTONE)) {
                 Player player = event.getEntity();
                 ItemStack mainHandItem = player.getMainHandItem();
 
@@ -173,6 +176,8 @@ public class ModEvents {
                         player.drop(dustStack, false);
                     }
                     event.setCanceled(true);
+                    // play sound
+                    level.playSound(null, event.getPos(), SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 0.8F, 1.5F + level.random.nextFloat() * 0.5F);
                 }
             }
         }

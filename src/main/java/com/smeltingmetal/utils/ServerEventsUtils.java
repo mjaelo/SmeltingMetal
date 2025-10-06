@@ -11,7 +11,7 @@ import com.smeltingmetal.objects.gem.GemDustItem;
 import com.smeltingmetal.objects.generic.MetalItem;
 import com.smeltingmetal.objects.mold.BlockMoldItem;
 import com.smeltingmetal.objects.mold.ItemMold;
-import com.smeltingmetal.objects.molten.MoltenMetalBlockItem;
+import com.smeltingmetal.objects.molten.MoltenMetalBlock;
 import com.smeltingmetal.objects.molten.MoltenMetalItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -72,7 +72,7 @@ public class ServerEventsUtils {
 
     public static Class<?> getContainerClass(ItemStack itemStack) {
         boolean isMoltenItem = itemStack.getItem() instanceof MoltenMetalItem;
-        boolean isMoltenBlock = itemStack.getItem() instanceof MoltenMetalBlockItem;
+        boolean isMoltenBlock = itemStack.getItem() instanceof MoltenMetalBlock;
         if (!isMoltenItem && !isMoltenBlock) return
                 null;
         return isMoltenItem ? ItemMold.class : BucketItem.class;
@@ -121,7 +121,7 @@ public class ServerEventsUtils {
         if (!shouldCool && !inFluid) return null;
 
         boolean isValidMold = contentStack.getItem() instanceof ItemMold moldItem && moldItem.getMaterialType() != MaterialType.CLAY;
-        boolean isValidMoltenMetal = isMetal && (contentStack.getItem() instanceof MoltenMetalItem || contentStack.getItem() instanceof MoltenMetalBlockItem);
+        boolean isValidMoltenMetal = isMetal && (contentStack.getItem() instanceof MoltenMetalItem || contentStack.getItem() instanceof MoltenMetalBlock);
         if (!isValidMold && !isValidMoltenMetal) return null;
 
         // get result item
@@ -258,7 +258,7 @@ public class ServerEventsUtils {
         MetalProperties metalProperties = ModUtils.getMetalPropertiesFromStack(stack);
 
         // if fluid is found, place it, otherwise drop it as an item
-        if (stack.getItem() instanceof MoltenMetalBlockItem && metalProperties.moltenFluid() != null) {
+        if (stack.getItem() instanceof MoltenMetalBlock && metalProperties.moltenFluid() != null) {
             Fluid fluid = ForgeRegistries.FLUIDS.getValue(metalProperties.moltenFluid());
             BlockPos pos = player.blockPosition().relative(player.getDirection());
             level.setBlockAndUpdate(pos, fluid.defaultFluidState().createLegacyBlock());

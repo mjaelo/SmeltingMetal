@@ -1,17 +1,17 @@
 package com.smeltingmetal.objects.molten;
 
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
+import com.smeltingmetal.objects.generic.MetalItem;
+import com.smeltingmetal.utils.EntityEventsUtils;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 
-public class MoltenMetalBlock extends Block {
-    public MoltenMetalBlock(Properties properties) {
-        super(properties);
+public class MoltenMetalBlock extends MetalItem {
+    public MoltenMetalBlock(Properties pProperties) {
+        super(pProperties);
     }
 
     @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        return EntityEventsUtils.handleStackAutoCooling(stack, entity);
     }
-
 }

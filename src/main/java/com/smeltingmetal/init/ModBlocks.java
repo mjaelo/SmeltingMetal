@@ -4,8 +4,6 @@ import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.MaterialType;
 import com.smeltingmetal.objects.mold.BlockMold;
 import com.smeltingmetal.objects.mold.BlockMoldItem;
-import com.smeltingmetal.objects.molten.MoltenMetalBlock;
-import com.smeltingmetal.objects.molten.MoltenMetalBlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -49,14 +47,6 @@ public class ModBlocks {
 
     public static final RegistryObject<Item> BLOCK_MOLD_NETHERITE_ITEM = BLOCK_ITEMS.register("block_mold_netherite",
             () -> new BlockMoldItem(BLOCK_MOLD_NETHERITE.get(), new Item.Properties(), MaterialType.NETHERITE));
-
-    // Molten metal block
-    public static final RegistryObject<Block> MOLTEN_METAL_BLOCK = BLOCKS.register("molten_metal_block",
-            () -> new MoltenMetalBlock(BlockBehaviour.Properties.of()));
-
-    public static final RegistryObject<Item> MOLTEN_METAL_BLOCK_ITEM = BLOCK_ITEMS.register("molten_metal_block",
-            () -> new MoltenMetalBlockItem(MOLTEN_METAL_BLOCK.get(), new Item.Properties().stacksTo(1)));
-
 
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);

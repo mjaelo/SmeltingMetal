@@ -36,15 +36,17 @@ public class ModConfig {
         public final ForgeConfigSpec.BooleanValue enableCrushingRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableNuggetRecipeReplacement;
         public final ForgeConfigSpec.BooleanValue enableResultRecipeRemoval;
+        public final ForgeConfigSpec.BooleanValue enableCraftingRecipeReplacement;
 
         public Config(ForgeConfigSpec.Builder builder) {
             builder.comment("Metal processing configuration")
                     .push("metals");
 
             // Default metal definitions
-            List<String> defaultMetals = List.of("iron,color=b9835f", "gold,color=fbeb2e", "copper,color=e97b53", "netherite,color=5d342c");
+            List<String> defaultMetals = List.of("iron,color=B3A294", "gold,color=FFD75F", "copper,color=F58E56", "netherite,color=74563b");
             metalDefinitions = builder
                     .comment("List of base metal names to be processed (e.g., iron, gold, tin).")
+                    .comment("It's possible to assign non standard values to its properties after comma: color, molten_fluid, bucket, block, raw, raw_block, nugget, crushed, ingot. f.e. netherite,raw=netherite_scrap")
                     .defineList(
                             "metal_definitions",
                             defaultMetals,
@@ -55,6 +57,7 @@ public class ModConfig {
             List<String> defaultGems = List.of("diamond,color=B0FFFF");
             gemDefinitions = builder
                     .comment("List of base gem names to be processed (e.g., diamond, emerald, ruby, sapphire).")
+                    .comment("It's possible to assign non standard values to its properties after comma: color, gem, shard, block f.e. emerald,shard=emerald_nugget")
                     .defineList(
                             "gem_definitions",
                             defaultGems,
@@ -74,7 +77,7 @@ public class ModConfig {
                     .defineList("block_result_definitions", defaultBlockResults, obj -> obj instanceof String);
 
             // Blacklist keywords for items that should not be processed
-            List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template", "shard");
+            List<String> defaultBlacklist = List.of("nugget", "scrap", "mold", "template", "shard", "bucket");
             blacklistKeywords = builder
                     .comment("List of keywords to blacklist from processing. Any item containing these strings in its name will be skipped from both melting and Create crushing recipes.")
                     .defineList("blacklist_keywords", defaultBlacklist, obj -> true);
@@ -104,12 +107,16 @@ public class ModConfig {
                     .define("enable_crushing_recipe_replacement", true);
 
             enableNuggetRecipeReplacement = builder
-                    .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal")
+                    .comment("Enable replacement of nugget->ingot crafting recipes with nugget->raw_metal/crushed_metal")
                     .define("enable_nugget_recipe_replacement", true);
 
             enableResultRecipeRemoval = builder
                     .comment("Enable removal of recipes for items in result lists.")
                     .define("enable_result_recipe_removal", true);
+
+            enableCraftingRecipeReplacement = builder
+                    .comment("Enable removal of crafting recipes for ingots, f.e. netherite ingot and if create mod is loaded add mixing recipes for them as well")
+                    .define("enable_ingot_crafting_recipe_replacement", false);
 
             builder.pop();
         }

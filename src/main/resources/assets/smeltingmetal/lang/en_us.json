@@ -11,13 +11,16 @@
 
   // Material Items
   "item.smeltingmetal.gem_dust_item": "%s Dust",
-  "item.smeltingmetal.gem_dust_item.tooltip": "Can fill molds by right clicking gem dust with them.",
+  "item.smeltingmetal.gem_dust_item.tooltip": "Gem crushed by grindstone or other means. Can fill molds by right clicking gem dust with them.",
 
   "item.smeltingmetal.molten_metal_item": "Molten %s",
   "item.smeltingmetal.molten_metal_item.tooltip": "This metal is so hot, you can only collect it with Item Mold in inventory. Cool it down back into Raw Ore with water or time.",
   
   "item.smeltingmetal.molten_metal_bucket": "Molten %s Bucket",
   "item.smeltingmetal.molten_metal_bucket.tooltip": "Use on Block Mold to fill it with Molten Metal.",
+
+  "item.smeltingmetal.molten_metal_block": "Molten %s Block",
+  "item.smeltingmetal.molten_metal_block.tooltip": "This metal is so hot, you can only collect it with Bucket in inventory. Cool it down back into Block of Raw Ore with water or time.",
 
   // Block Molds
   "block.smeltingmetal.block_mold_clay": "Clay Block Mold",
@@ -27,9 +30,5 @@
   "block.smeltingmetal.block_mold_hardened.tooltip": "After filling, cool metals with water bucket, gems with lava bucket.",
   
   "block.smeltingmetal.block_mold_netherite": "Netherite Block Mold",
-  "block.smeltingmetal.block_mold_netherite.tooltip": "After filling, cool metals with water bucket, gems with lava bucket.",
-  
-  // Metal Blocks
-  "block.smeltingmetal.molten_metal_block": "Molten Block",
-  "block.smeltingmetal.molten_metal_block.tooltip": "This metal is so hot, you can only collect it with Bucket in inventory. Cool it down back into Block of Raw Ore with water or time."
+  "block.smeltingmetal.block_mold_netherite.tooltip": "After filling, cool metals with water bucket, gems with lava bucket."
 }

@@ -182,6 +182,7 @@ public class ModData {
         // Default values
         String gemPath = gemName;
         String blockPath = gemName + "_block";
+        String shardPath = gemName + "_shard";
 
         // Create maps to store item and block results
         Map<String, ResourceLocation> itemResults = new HashMap<>();
@@ -199,6 +200,7 @@ public class ModData {
                 switch (key) {
                     case "gem" -> gemPath = value;
                     case "block" -> blockPath = value;
+                    case "shard" -> shardPath = value;
                     case "color" -> color = Integer.parseInt(value, 16);
                     default -> LOGGER.warn("Unknown property '{}' for gem '{}'", key, gemName);
                 }
@@ -207,6 +209,7 @@ public class ModData {
 
         ResourceLocation gem = findInRegistry(ForgeRegistries.ITEMS, gemPath);
         ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath);
+        ResourceLocation shard = findInRegistry(ForgeRegistries.ITEMS, shardPath);
 
         if (gem == null && block == null) {
             LOGGER.error("Missing required items for gem '{}'. Failed to create GemProperties. (gem: {}, block: {})",
@@ -214,7 +217,7 @@ public class ModData {
             return;
         }
 
-        GemProperties properties = new GemProperties(gemName, gem, block, itemResults, blockResults, color);
+        GemProperties properties = new GemProperties(gemName, gem, block, shard, itemResults, blockResults, color);
         GEM_PROPERTIES_MAP.put(gemName, properties);
         LOGGER.info("Created GemProperties for gem: {}", gemName);
     }

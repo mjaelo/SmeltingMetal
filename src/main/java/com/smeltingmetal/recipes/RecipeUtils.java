@@ -4,8 +4,12 @@ import com.mojang.logging.LogUtils;
 import com.smeltingmetal.config.ModConfig;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,7 +49,8 @@ public class RecipeUtils {
     private static Field getRecipesField() throws NoSuchFieldException {
         try {
             return RecipeManager.class.getDeclaredField("recipes");
-        } catch (NoSuchFieldException ignored) {}
+        } catch (NoSuchFieldException ignored) {
+        }
         for (Field field : RecipeManager.class.getDeclaredFields()) {
             if (Map.class.isAssignableFrom(field.getType())) {
                 field.setAccessible(true);
@@ -58,7 +63,8 @@ public class RecipeUtils {
     private static Field getByNameField() throws NoSuchFieldException {
         try {
             return RecipeManager.class.getDeclaredField("byName");
-        } catch (NoSuchFieldException ignored) {}
+        } catch (NoSuchFieldException ignored) {
+        }
         int mapCount = 0;
         for (Field field : RecipeManager.class.getDeclaredFields()) {
             if (Map.class.isAssignableFrom(field.getType())) {
@@ -72,19 +78,31 @@ public class RecipeUtils {
         throw new NoSuchFieldException("Could not find 'byName' field in RecipeManager.");
     }
 
-    public static boolean isInputNotBlacklisted(Recipe<?> recipe) {
-        if (!(recipe instanceof AbstractCookingRecipe cooking) || cooking.getIngredients().isEmpty()) return true;
-        Ingredient ing = cooking.getIngredients().get(0);
+    public static boolean isRecipeAllowed(Recipe<?> recipe, RegistryAccess registryAccess) {
+        if (recipe.getIngredients().isEmpty() || recipe.getIngredients().get(0).isEmpty()) {
+            return true;
+        }
+        Ingredient ing = recipe.getIngredients().get(0);
+
         for (ItemStack st : ing.getItems()) {
             ResourceLocation rid = ForgeRegistries.ITEMS.getKey(st.getItem());
             if (rid == null) continue;
             String p = rid.getPath().toLowerCase();
-            for (String bad : ModConfig.CONFIG.blacklistKeywords.get()) {
-                if (p.contains(bad)) {
-                    return false;
-                }
+            if (ModConfig.CONFIG.blacklistKeywords.get().stream().anyMatch(p::contains)) {
+                return false;
             }
         }
+
+        Item result = recipe.getResultItem(registryAccess).getItem();
+        ResourceLocation rid = ForgeRegistries.ITEMS.getKey(result);
+        if (rid == null) return true;
+        String path = rid.getPath().toLowerCase();
+        for (String bad : ModConfig.CONFIG.blacklistKeywords.get()) {
+            if (path.contains(bad)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -116,7 +134,7 @@ public class RecipeUtils {
             Recipe<?> recipeToRemove = recipeManager.byKey(recipeId).orElse(null);
             if (recipeToRemove == null) {
                 LOGGER.warn("Attempted to remove recipe '{}' but it was not found in the manager.", recipeId);
-                return ;
+                return;
             }
             RecipeType<?> type = recipeToRemove.getType();
 

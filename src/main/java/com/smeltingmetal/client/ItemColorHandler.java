@@ -3,7 +3,6 @@ package com.smeltingmetal.client;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.data.GemProperties;
 import com.smeltingmetal.data.MetalProperties;
-import com.smeltingmetal.init.ModBlocks;
 import com.smeltingmetal.init.ModItems;
 import com.smeltingmetal.utils.ModUtils;
 import net.minecraftforge.api.distmarker.Dist;
@@ -34,7 +33,7 @@ public class ItemColorHandler {
             return tintIndex == 0 && metalProps != null
                     ? metalProps.color()
                     : DEFAULT_COLOR; // Default white (no tint) for other layers
-        }, ModBlocks.MOLTEN_METAL_BLOCK.get());
+        }, ModItems.MOLTEN_METAL_BLOCK.get());
         event.register((stack, tintIndex) -> {
             MetalProperties metalProps = ModUtils.getMetalPropertiesFromStack(stack);
             return tintIndex == 1 && metalProps != null

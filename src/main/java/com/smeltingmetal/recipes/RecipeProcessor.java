@@ -2,6 +2,8 @@ package com.smeltingmetal.recipes;
 
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.content.kinetics.crusher.CrushingRecipe;
+import com.simibubi.create.content.kinetics.mixer.MixingRecipe;
+import com.simibubi.create.content.processing.recipe.HeatCondition;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.smeltingmetal.SmeltingMetalMod;
 import com.smeltingmetal.config.ModConfig;
@@ -60,14 +62,19 @@ public class RecipeProcessor {
         boolean shouldModifyGem = ModConfig.CONFIG.enableGemRecipeReplacement.get();
         boolean shouldModifyNugget = ModConfig.CONFIG.enableNuggetRecipeReplacement.get();
         boolean shouldRemoveResultRecipes = ModConfig.CONFIG.enableResultRecipeRemoval.get();
-
+        boolean shouldReplaceIngotCraftingWithMixing = ModConfig.CONFIG.enableCraftingRecipeReplacement.get();
 
         List<Recipe<?>> metalRecipes = new ArrayList<>(recipeManager.getRecipes()).stream()
                 .filter(r -> isResourceMetal(RecipeUtils.getRecipeResultLocation(registryAccess, r)))
+                .filter(r -> RecipeUtils.isRecipeAllowed(r, registryAccess))
                 .toList();
         List<ResourceLocation> metalItems = ForgeRegistries.ITEMS.getKeys().stream()
                 .filter(RecipeProcessor::isResourceMetal)
                 .filter(RecipeUtils::isItemNotBlacklisted)
+                .toList();
+        List<Recipe<?>> gemRecipes = new ArrayList<>(recipeManager.getRecipes()).stream()
+                .filter(r -> isResourceGem(RecipeUtils.getRecipeResultLocation(registryAccess, r)))
+                .filter(r -> RecipeUtils.isRecipeAllowed(r, registryAccess))
                 .toList();
         List<ResourceLocation> gemItems = ForgeRegistries.ITEMS.getKeys().stream()
                 .filter(RecipeProcessor::isResourceGem)
@@ -80,19 +87,61 @@ public class RecipeProcessor {
         if (shouldModifySmelting) {
             List<Recipe<?>> metalMeltingRecipesToRemove = metalRecipes.stream()
                     .filter(r -> Arrays.asList(RecipeType.SMELTING, RecipeType.BLASTING).contains(r.getType()))
-                    .filter(RecipeUtils::isInputNotBlacklisted)
                     .toList();
             recipesToRemove.addAll(metalMeltingRecipesToRemove);
             addNewMetalMeltingRecipes(recipeManager, metalItems);
         }
 
+        if (shouldReplaceIngotCraftingWithMixing) {
+            List<ResourceLocation> ingots = ModData.getMetalPropertiesMap().values().stream()
+                    .map(MetalProperties::ingot)
+                    .toList();
+            List<Recipe<?>> craftingRecipesToRemove = recipeManager.getRecipes().stream()
+                    .filter(r -> r.getType() == RecipeType.CRAFTING)
+                    .filter(r -> {
+                        ResourceLocation recipeResultLocation = RecipeUtils.getRecipeResultLocation(registryAccess, r);
+                        return ingots.contains(recipeResultLocation);
+                    })
+                    .toList();
+            if (isCreateLoaded) {
+                // add create mixing recipe with ingriedients from recipe
+                craftingRecipesToRemove.forEach(r-> {
+                    List<Ingredient> ingredients = r.getIngredients();
+                    ItemStack resultItem = r.getResultItem(registryAccess);
+                    createAndAddMixingRecipe(recipeManager, ingredients, resultItem);
+                });
+            }
+            recipesToRemove.addAll(craftingRecipesToRemove);
+        }
+
+        if (shouldModifyGem) {
+            Map<String, List<ResourceLocation>> gemResultsMap = new HashMap<>();
+            ModData.getGemPropertiesMap().forEach((key, value) ->
+                    gemResultsMap.put(key, Stream.concat(value.blockResults().values().stream(), value.itemResults().values().stream()).toList())
+            );
+            List<Recipe<?>> gemCraftingRecipesToRemove = gemRecipes.stream()
+                    .filter(r -> Arrays.asList(RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.CRAFTING).contains(r.getType()))
+                    .filter(r -> {
+                        ItemStack resultItem = r.getResultItem(registryAccess);
+                        String gemKey = ModUtils.getContentKeyFromString(resultItem.getDescriptionId());
+                        return gemResultsMap.containsKey(gemKey) && gemResultsMap.get(gemKey).contains(ForgeRegistries.ITEMS.getKey(resultItem.getItem()));
+                    })
+                    .toList();
+            recipesToRemove.addAll(gemCraftingRecipesToRemove);
+        }
+
         if (shouldModifyCrushing) {
             List<Recipe<?>> metalCrushingRecipesToRemove = metalRecipes.stream()
                     .filter(r -> r instanceof CrushingRecipe)
-                    .filter(RecipeUtils::isInputNotBlacklisted)
                     .toList();
             recipesToRemove.addAll(metalCrushingRecipesToRemove);
-            addNewCrushingRecipes(recipeManager, metalItems,gemItems);
+
+            List<Recipe<?>> gemCrushingRecipesToRemove = gemRecipes.stream()
+                    .filter(r -> r instanceof CrushingRecipe)
+                    .toList();
+            recipesToRemove.addAll(gemCrushingRecipesToRemove);
+
+            addNewCrushingRecipes(recipeManager, metalItems, gemItems);
         }
 
         if (shouldModifyNugget) {
@@ -103,18 +152,26 @@ public class RecipeProcessor {
                     ).toList();
             recipesToRemove.addAll(nuggetCraftingRecipesToRemove);
             addNuggetCraftingRecipes(recipeManager);
+            if (shouldModifyGem) {
+                addGemShardCraftingRecipes(recipeManager);
+            }
         }
 
         // Remove recipes that produce items from MetalProperties
         if (shouldRemoveResultRecipes) {
             Set<ResourceLocation> metalResultIds = ModData.getMetalPropertiesMap().values().stream()
                     .flatMap(mp -> Stream.concat(
-                            mp.itemResults().values().stream(),
-                            mp.blockResults().values().stream()
+                            mp.itemResults().entrySet().stream()
+                                    .filter(entry -> !"ingot".equals(entry.getKey()))
+                                    .map(Map.Entry::getValue),
+                            mp.blockResults().entrySet().stream()
+                                    .filter(entry -> !"block".equals(entry.getKey()))
+                                    .map(Map.Entry::getValue)
                     ))
                     .collect(Collectors.toSet());
 
             List<Recipe<?>> resultCraftingRecipesToRemove = metalRecipes.stream()
+                    .filter(r -> Arrays.asList(RecipeType.SMELTING, RecipeType.BLASTING, RecipeType.CRAFTING).contains(r.getType()))
                     .filter(r -> {
                         ResourceLocation resultId = ForgeRegistries.ITEMS.getKey(r.getResultItem(registryAccess).getItem());
                         return resultId != null && metalResultIds.contains(resultId);
@@ -170,6 +227,7 @@ public class RecipeProcessor {
         return ModUtils.getAllMetalProperties().keySet().stream()
                 .anyMatch(metalKey -> result.getPath().contains(metalKey));
     }
+
     private static boolean isResourceGem(ResourceLocation result) {
         if (result == null) return false;
         return ModData.getGemPropertiesMap().keySet().stream()
@@ -185,14 +243,6 @@ public class RecipeProcessor {
             Item nuggetGroup = ForgeRegistries.ITEMS.getValue(nuggetGroupLoc);
             Item nuggetItem = ForgeRegistries.ITEMS.getValue(metalProps.nugget());
             if (nuggetGroup == null || nuggetItem == null) continue;
-            if (nuggetGroup instanceof MetalItem || nuggetGroup instanceof MetalBlockItem) {
-                ItemStack stack = new ItemStack(nuggetGroup);
-                ModUtils.setContentToStack(stack, metalProps.name());
-            }
-            if (nuggetItem instanceof MetalItem || nuggetItem instanceof MetalBlockItem) {
-                ItemStack stack = new ItemStack(nuggetItem);
-                ModUtils.setContentToStack(stack, metalProps.name());
-            }
 
             // create shapeless recipe
             create9ItemsFrom1(recipeManager, nuggetItem, nuggetGroup, nuggetGroupLoc.getPath(), metalProps.nugget().getPath());
@@ -210,6 +260,24 @@ public class RecipeProcessor {
         }
     }
 
+    private static void addGemShardCraftingRecipes(RecipeManager recipeManager) {
+        for (GemProperties gemProps : ModUtils.getAllGemProperties().values()) {
+            // setup input and output items
+            if (gemProps.shard() == null) continue;
+            Item shardItem = ForgeRegistries.ITEMS.getValue(gemProps.shard());
+            if (shardItem == null || shardItem == Items.AIR) continue;
+            Item gemItem = ForgeRegistries.ITEMS.getValue(gemProps.gem());
+            if (gemItem == null || gemItem == Items.AIR) continue;
+            Item dustItem = ModItems.GEM_DUST_ITEM.get();
+
+            // create shapeless recipe
+            create9ItemsFrom1(recipeManager, shardItem, gemItem, "gem_dust", gemProps.shard().getPath());
+
+            // create shaped recipe
+            create1ItemFrom9(recipeManager, shardItem, dustItem, "gem_dust", gemProps.shard().getPath());
+        }
+    }
+
     private static void create1ItemFrom9(RecipeManager recipeManager, Item singleItem, Item groupItem, String singleName, String groupName) {
         String shapedRecipeIdSuffix = groupName + "_from_" + singleName;
         ResourceLocation shapedRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapedRecipeIdSuffix);
@@ -217,10 +285,10 @@ public class RecipeProcessor {
         for (int i = 0; i < 9; i++) {
             nuggetIngs.set(i, Ingredient.of(singleItem));
         }
-
-        String metalName = ModUtils.getContentKeyFromString(singleItem.toString());
         ItemStack groupStack = new ItemStack(groupItem, 1);
-        if (metalName != null && (groupItem instanceof MetalItem || groupItem instanceof MetalBlockItem)) {
+
+        if (groupItem instanceof MetalItem || groupItem instanceof MetalBlockItem) {
+            String metalName = ModUtils.getContentKeyFromString(singleItem.toString());
             ModUtils.setContentToStack(groupStack, metalName);
         }
 
@@ -239,7 +307,7 @@ public class RecipeProcessor {
         String shapelessRecipeIdSuffix = singleName + "_from_" + groupName;
         ResourceLocation shapelessRecipeId = new ResourceLocation(SmeltingMetalMod.MODID, shapelessRecipeIdSuffix);
 
-        String metalName = ModUtils.getContentKeyFromString(groupItem.toString());
+        String metalName = ModUtils.getContentKeyFromAllowedString(groupItem.toString());
         ItemStack singleStack = new ItemStack(singleItem, 9);
         if (metalName != null && (singleItem instanceof MetalItem || singleItem instanceof MetalBlockItem)) {
             ModUtils.setContentToStack(singleStack, metalName);
@@ -257,7 +325,7 @@ public class RecipeProcessor {
 
     private static void addNewCrushingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems, List<ResourceLocation> gemItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = ModUtils.getContentKeyFromString(itemId.getPath());
+            String metalKey = ModUtils.getContentKeyFromAllowedString(itemId.getPath());
             if (metalKey == null) continue;
             MetalProperties metalProps = ModUtils.getMetalProperties(metalKey);
             if (metalProps == null) continue;
@@ -273,7 +341,7 @@ public class RecipeProcessor {
         }
 
         for (ResourceLocation itemId : gemItems) {
-            String gemKey = ModUtils.getContentKeyFromString(itemId.getPath());
+            String gemKey = ModUtils.getContentKeyFromAllowedString(itemId.getPath());
             if (gemKey == null) continue;
             GemProperties gemProps = ModUtils.getGemProperties(gemKey);
             if (gemProps == null) continue;
@@ -308,9 +376,29 @@ public class RecipeProcessor {
         }
     }
 
+    private static void createAndAddMixingRecipe(RecipeManager recipeManager, List<Ingredient> input, ItemStack result) {
+        try {
+            String recipeName = "mixing/" + result.getItem().toString()+"_from_"+input.get(0).getItems()[0].getItem().toString();
+            ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID, recipeName);
+            ProcessingRecipeBuilder<MixingRecipe> builder = new ProcessingRecipeBuilder<>(MixingRecipe::new, recipeId);
+            NonNullList<Ingredient> ingredients = NonNullList.create();
+            ingredients.addAll(input);
+            builder.withItemIngredients(ingredients)
+                    .output(result)
+                    .requiresHeat(HeatCondition.HEATED)
+                    .build();
+            MixingRecipe recipe = builder.build();
+            RecipeUtils.createInRecipeInManager(recipeManager, recipeId, recipe);
+        } catch (Exception e) {
+            LOGGER.error("Failed to create mixing recipe for {}: {}",
+                    ForgeRegistries.ITEMS.getKey(result.getItem()),
+                    e.getMessage());
+        }
+    }
+
     private static void addNewMetalMeltingRecipes(RecipeManager recipeManager, List<ResourceLocation> metalItems) {
         for (ResourceLocation itemId : metalItems) {
-            String metalKey = ModUtils.getContentKeyFromString(itemId.getPath());
+            String metalKey = ModUtils.getContentKeyFromAllowedString(itemId.getPath());
             if (metalKey == null) continue;
             MetalProperties metalProps = ModUtils.getMetalProperties(metalKey);
             if (metalProps == null) continue;
@@ -321,7 +409,7 @@ public class RecipeProcessor {
             if (inputItem == null || inputItem == Items.AIR) continue;
 
             // Create result stack
-            Item resultItem = isBlock ? ModBlocks.MOLTEN_METAL_BLOCK_ITEM.get() : ModItems.MOLTEN_METAL_ITEM.get();
+            Item resultItem = isBlock ? ModItems.MOLTEN_METAL_BLOCK.get() : ModItems.MOLTEN_METAL_ITEM.get();
             ItemStack resultStack = new ItemStack(resultItem);
             ModUtils.setContentToStack(resultStack, metalProps.name());
 
