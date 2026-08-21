@@ -72,13 +72,13 @@ dependencies {
     implementation("io.github.llamalad7:mixinextras-forge:0.4.1")
 
     // Optional compatible mods
-    implementation fg.deobf("curse.maven:jei-238222:6600311")
-    implementation fg.deobf("curse.maven:create-metalwork-966104:6302297")
-    implementation fg.deobf("curse.maven:quark-243121:6427817")
-    implementation fg.deobf("curse.maven:zeta-968868:6432578")
-    implementation fg.deobf("curse.maven:jade-324717:6855440")
-    implementation fg.deobf("curse.maven:spelunkery-790530:6122072")
-    implementation fg.deobf("curse.maven:selene-499980:6983934")
+//    implementation fg.deobf("curse.maven:jei-238222:8677648")
+//    implementation fg.deobf("curse.maven:create-metalwork-966104:6302297")
+//    implementation fg.deobf("curse.maven:quark-243121:6427817")
+//    implementation fg.deobf("curse.maven:zeta-968868:6432578")
+//    implementation fg.deobf("curse.maven:jade-324717:6855440")
+//    implementation fg.deobf("curse.maven:spelunkery-790530:6122072")
+//    implementation fg.deobf("curse.maven:selene-499980:6983934")
 }
 
 tasks.named('processResources', ProcessResources).configure {

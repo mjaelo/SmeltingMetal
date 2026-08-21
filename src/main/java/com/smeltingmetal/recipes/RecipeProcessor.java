@@ -56,6 +56,9 @@ public class RecipeProcessor {
     }
 
     private static void modifyRecipes(RecipeManager recipeManager, RegistryAccess registryAccess) {
+        // Cache all recipes once to avoid repeated expensive getRecipes() calls that cause JEI freeze
+        Collection<Recipe<?>> allRecipes = recipeManager.getRecipes();
+
         boolean isCreateLoaded = ModList.get().isLoaded("create");
         boolean shouldModifyCrushing = isCreateLoaded && ModConfig.CONFIG.enableCrushingRecipeReplacement.get();
         boolean shouldModifySmelting = ModConfig.CONFIG.enableMeltingRecipeReplacement.get();
@@ -64,7 +67,7 @@ public class RecipeProcessor {
         boolean shouldRemoveResultRecipes = ModConfig.CONFIG.enableResultRecipeRemoval.get();
         boolean shouldReplaceIngotCraftingWithMixing = ModConfig.CONFIG.enableCraftingRecipeReplacement.get();
 
-        List<Recipe<?>> metalRecipes = new ArrayList<>(recipeManager.getRecipes()).stream()
+        List<Recipe<?>> metalRecipes = new ArrayList<>(allRecipes).stream()
                 .filter(r -> isResourceMetal(RecipeUtils.getRecipeResultLocation(registryAccess, r)))
                 .filter(r -> RecipeUtils.isRecipeAllowed(r, registryAccess))
                 .toList();
@@ -72,7 +75,7 @@ public class RecipeProcessor {
                 .filter(RecipeProcessor::isResourceMetal)
                 .filter(RecipeUtils::isItemNotBlacklisted)
                 .toList();
-        List<Recipe<?>> gemRecipes = new ArrayList<>(recipeManager.getRecipes()).stream()
+        List<Recipe<?>> gemRecipes = new ArrayList<>(allRecipes).stream()
                 .filter(r -> isResourceGem(RecipeUtils.getRecipeResultLocation(registryAccess, r)))
                 .filter(r -> RecipeUtils.isRecipeAllowed(r, registryAccess))
                 .toList();
@@ -96,7 +99,7 @@ public class RecipeProcessor {
             List<ResourceLocation> ingots = ModData.getMetalPropertiesMap().values().stream()
                     .map(MetalProperties::ingot)
                     .toList();
-            List<Recipe<?>> craftingRecipesToRemove = recipeManager.getRecipes().stream()
+            List<Recipe<?>> craftingRecipesToRemove = allRecipes.stream()
                     .filter(r -> r.getType() == RecipeType.CRAFTING)
                     .filter(r -> {
                         ResourceLocation recipeResultLocation = RecipeUtils.getRecipeResultLocation(registryAccess, r);
@@ -442,7 +445,7 @@ public class RecipeProcessor {
         if (inputId == null) return;
 
         // Create recipe ID based on input item
-        String idName = String.format("smithing_%s_%s", inputId.getNamespace(), inputId.getPath());
+        String idName = String.format("smithing_crafting_%s_%s", inputId.getNamespace(), inputId.getPath());
         ResourceLocation recipeId = new ResourceLocation(SmeltingMetalMod.MODID, idName);
 
         // Set up ingredients for the cross pattern
@@ -495,8 +498,9 @@ public class RecipeProcessor {
 
     private static void syncRecipesToPlayers() {
         if (SmeltingMetalMod.getServer() == null) return;
-        var packet = new ClientboundUpdateRecipesPacket(
-                SmeltingMetalMod.getServer().getRecipeManager().getRecipes());
+        // Cache recipes to avoid expensive getRecipes() call during JEI indexing
+        Collection<Recipe<?>> recipes = SmeltingMetalMod.getServer().getRecipeManager().getRecipes();
+        var packet = new ClientboundUpdateRecipesPacket(recipes);
         for (var p : SmeltingMetalMod.getServer().getPlayerList().getPlayers()) {
             p.connection.send(packet);
         }
