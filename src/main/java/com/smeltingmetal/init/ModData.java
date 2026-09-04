@@ -103,8 +103,10 @@ public class ModData {
         // Parse the metal definition string
         String[] parts = metalDef.split(",");
         String metalName = parts[0].trim();
+        String namespace = "";
         if (metalName.contains(":")) {
-            metalName = metalName.substring(metalName.indexOf(':') + 1);
+            namespace = metalName.split(":")[0];
+            metalName = metalName.split(":")[1];
         }
 
         // Default values
@@ -122,8 +124,8 @@ public class ModData {
         Map<String, ResourceLocation> itemResults = new HashMap<>();
         Map<String, ResourceLocation> blockResults = new HashMap<>();
 
-        populateResults(metalName, ITEM_SHAPE_MAP, itemResults);
-        populateResults(metalName, BLOCK_SHAPE_MAP, blockResults);
+        populateResults(metalName, ITEM_SHAPE_MAP, itemResults,namespace);
+        populateResults(metalName, BLOCK_SHAPE_MAP, blockResults,namespace);
 
         // Parse custom paths if provided
         for (int i = 1; i < parts.length; i++) {
@@ -147,8 +149,8 @@ public class ModData {
         }
 
         // Find the actual resources
-        ResourceLocation ingot = findInRegistry(ForgeRegistries.ITEMS, ingotPath);
-        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath);
+        ResourceLocation ingot = findInRegistry(ForgeRegistries.ITEMS, ingotPath, namespace);
+        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath, namespace);
 
         if (ingot == null && block == null) {
             LOGGER.error("Missing required items for metal '{}'. Failed to create MetalProperties. (ingot: {}, block: {})",
@@ -157,12 +159,12 @@ public class ModData {
         }
 
         // Find optional items or use default fallbacks
-        ResourceLocation raw = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, rawPath);
-        ResourceLocation rawBlock = block == null ? null : findInRegistry(ForgeRegistries.BLOCKS, rawBlockPath);
-        ResourceLocation nugget = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, nuggetPath);
-        ResourceLocation crushed = ingot == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, crushedPath, raw); // Fallback for Create compat
-        ResourceLocation bucket = block == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, bucketPath, ModItems.MOLTEN_METAL_BUCKET.getId());
-        ResourceLocation moltenFluid = block == null ? null : findInRegistry(ForgeRegistries.FLUIDS, moltenFluidPath);
+        ResourceLocation raw = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, rawPath, namespace);
+        ResourceLocation rawBlock = block == null ? null : findInRegistry(ForgeRegistries.BLOCKS, rawBlockPath, namespace);
+        ResourceLocation nugget = ingot == null ? null : findInRegistry(ForgeRegistries.ITEMS, nuggetPath, namespace);
+        ResourceLocation crushed = ingot == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, crushedPath, raw, namespace); // Fallback for Create compat
+        ResourceLocation bucket = block == null ? null : findInRegistryOrUseDefault(ForgeRegistries.ITEMS, bucketPath, ModItems.MOLTEN_METAL_BUCKET.getId(), namespace);
+        ResourceLocation moltenFluid = block == null ? null : findInRegistry(ForgeRegistries.FLUIDS, moltenFluidPath, namespace);
 
         // Create MetalProperties with both item and block results
         MetalProperties properties = new MetalProperties(metalName, ingot, block, raw, rawBlock, nugget,
@@ -174,8 +176,10 @@ public class ModData {
     private static void parseGemProperties(String gemDef) {
         String[] parts = gemDef.split(",");
         String gemName = parts[0].trim();
+        String namespace = "";
         if (gemName.contains(":")) {
-            gemName = gemName.substring(gemName.indexOf(':') + 1);
+            namespace = gemName.split(":")[0];
+            gemName = gemName.split(":")[1];
         }
         int color = DEFAULT_COLOR;
 
@@ -188,8 +192,8 @@ public class ModData {
         Map<String, ResourceLocation> itemResults = new HashMap<>();
         Map<String, ResourceLocation> blockResults = new HashMap<>();
 
-        populateResults(gemName, ITEM_SHAPE_MAP, itemResults);
-        populateResults(gemName, BLOCK_SHAPE_MAP, blockResults);
+        populateResults(gemName, ITEM_SHAPE_MAP, itemResults,namespace);
+        populateResults(gemName, BLOCK_SHAPE_MAP, blockResults,namespace);
 
         // Parse custom paths if provided
         for (int i = 1; i < parts.length; i++) {
@@ -207,9 +211,9 @@ public class ModData {
             }
         }
 
-        ResourceLocation gem = findInRegistry(ForgeRegistries.ITEMS, gemPath);
-        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath);
-        ResourceLocation shard = findInRegistry(ForgeRegistries.ITEMS, shardPath);
+        ResourceLocation gem = findInRegistry(ForgeRegistries.ITEMS, gemPath,namespace);
+        ResourceLocation block = findInRegistry(ForgeRegistries.BLOCKS, blockPath,namespace);
+        ResourceLocation shard = findInRegistry(ForgeRegistries.ITEMS, shardPath,namespace);
 
         if (gem == null && block == null) {
             LOGGER.error("Missing required items for gem '{}'. Failed to create GemProperties. (gem: {}, block: {})",
@@ -231,17 +235,17 @@ public class ModData {
                 .orElse(null);
     }
 
-    private static <T> ResourceLocation findInRegistry(IForgeRegistry<T> registry, String suffix) {
-        return registry.getValues().stream()
+    private static <T> ResourceLocation findInRegistry(IForgeRegistry<T> registry, String suffix, String namespace) {
+        var matches = registry.getValues().stream()
                 .map(registry::getKey)
                 .filter(Objects::nonNull)
                 .filter(key -> key.getPath().equals(suffix))
-                .findFirst()
-                .orElse(null);
+                .toList();
+        return matches.size() == 1 ? matches.get(0) : matches.stream().filter(key -> namespace.isEmpty() || key.getNamespace().equals(namespace)).findFirst().orElse(null);
     }
 
-    private static <T> ResourceLocation findInRegistryOrUseDefault(IForgeRegistry<T> registry, String suffix, ResourceLocation defaultItem) {
-        ResourceLocation foundItem = findInRegistry(registry, suffix);
+    private static <T> ResourceLocation findInRegistryOrUseDefault(IForgeRegistry<T> registry, String suffix, ResourceLocation defaultItem,String namespace) {
+        ResourceLocation foundItem = findInRegistry(registry, suffix, namespace);
         if (foundItem != null) {
             return foundItem;
         }
@@ -249,12 +253,12 @@ public class ModData {
         return defaultItem;
     }
 
-    private static void populateResults(String metalName, Map<String, List<String>> shapeMap, Map<String, ResourceLocation> results) {
+    private static void populateResults(String metalName, Map<String, List<String>> shapeMap, Map<String, ResourceLocation> results, String namespace) {
         shapeMap.entrySet().stream()
                 .filter(shapeSet -> !results.containsKey(shapeSet.getKey()))
                 .forEach(shapeSet -> shapeSet.getValue().stream()
                         .map(shapeValue -> {
-                            ResourceLocation item = findInRegistry(ForgeRegistries.ITEMS, metalName + "_" + shapeValue);
+                            ResourceLocation item = findInRegistry(ForgeRegistries.ITEMS, metalName + "_" + shapeValue,namespace);
                             return item != null ? item : findInRegistryContaining(ForgeRegistries.ITEMS, List.of(metalName, "_" + shapeValue));
                         })
                         .filter(Objects::nonNull)

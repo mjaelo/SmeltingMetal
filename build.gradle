@@ -79,6 +79,9 @@ dependencies {
 //    implementation fg.deobf("curse.maven:jade-324717:6855440")
 //    implementation fg.deobf("curse.maven:spelunkery-790530:6122072")
 //    implementation fg.deobf("curse.maven:selene-499980:6983934")
+//    implementation fg.deobf("curse.maven:caverns-and-chasms-438005:7935118")
+//    implementation fg.deobf("curse.maven:oreganized-769203:7182747")
+//    implementation fg.deobf("curse.maven:blueprint-382216:8048579")
 }
 
 tasks.named('processResources', ProcessResources).configure {

@@ -45,7 +45,7 @@ public class ModConfig {
             // Default metal definitions
             List<String> defaultMetals = List.of("iron,color=B3A294", "gold,color=FFD75F", "copper,color=F58E56", "netherite,color=74563b");
             metalDefinitions = builder
-                    .comment("List of base metal names to be processed (e.g., iron, gold, tin).")
+                    .comment("List of base metal names to be processed (e.g., iron, gold, tin). you can assign namespace to take fields from a specific mod, f.e. oreganized:silver")
                     .comment("It's possible to assign non standard values to its properties after comma: color, molten_fluid, bucket, block, raw, raw_block, nugget, crushed, ingot. f.e. netherite,raw=netherite_scrap")
                     .defineList(
                             "metal_definitions",
