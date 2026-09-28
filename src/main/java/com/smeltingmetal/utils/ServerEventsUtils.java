@@ -182,8 +182,8 @@ public class ServerEventsUtils {
 
     public static boolean printItemIntoItemMold(ItemStack mainHand, ItemStack offHand, Player player) {
         // Check which hand is the mold
-        boolean isMainHandMold = mainHand.getItem() instanceof ItemMold && ModUtils.getContentFromStack(mainHand).equals(ModData.DEFAULT_CONTENT);
-        boolean isOffHandMold = offHand.getItem() instanceof ItemMold && ModUtils.getContentFromStack(offHand).equals(ModData.DEFAULT_CONTENT);
+        boolean isMainHandMold = mainHand.getItem() instanceof ItemMold mold && mold.getMaterialType() == MaterialType.CLAY && ModUtils.getContentFromStack(mainHand).equals(ModData.DEFAULT_CONTENT);
+        boolean isOffHandMold = offHand.getItem() instanceof ItemMold mold && mold.getMaterialType() == MaterialType.CLAY && ModUtils.getContentFromStack(offHand).equals(ModData.DEFAULT_CONTENT);
         if (!isMainHandMold && !isOffHandMold) return false;
 
         String handShape = ModUtils.getShapeKeyFromString(isMainHandMold ? offHand.getDescriptionId() : mainHand.getDescriptionId(), false);
